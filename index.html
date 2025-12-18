@@ -1,0 +1,2641 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام المراسلات الداخلية - مدرسة الثروات الوطنية الخاصة</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                        secondary: '#7C3AED',
+                        accent: '#10B981',
+                        danger: '#EF4444',
+                        warning: '#F59E0B',
+                        success: '#10B981',
+                        uae: {
+                            red: '#FF0000',
+                            green: '#009639',
+                            white: '#FFFFFF',
+                            black: '#000000'
+                        }
+                    },
+                    fontFamily: {
+                        'arabic': ['Tajawal', 'Cairo', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap');
+        
+        * {
+            font-family: 'Tajawal', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .dark .glass-card {
+            background: rgba(31, 41, 55, 0.95);
+        }
+        
+        .card-hover {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        
+        .pulse-notification {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+        
+        .slide-in-right {
+            animation: slideInRight 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        
+        .slide-in-left {
+            animation: slideInLeft 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-100px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.8s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+
+        .priority-urgent {
+            border-right: 5px solid #EF4444;
+            background: linear-gradient(90deg, rgba(239, 68, 68, 0.15) 0%, transparent 100%);
+        }
+        
+        .priority-high {
+            border-right: 5px solid #F59E0B;
+            background: linear-gradient(90deg, rgba(245, 158, 11, 0.15) 0%, transparent 100%);
+        }
+        
+        .priority-normal {
+            border-right: 5px solid #10B981;
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.15) 0%, transparent 100%);
+        }
+
+        .status-pending {
+            color: #F59E0B;
+            background: rgba(245, 158, 11, 0.1);
+        }
+        
+        .status-approved {
+            color: #10B981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+        
+        .status-rejected {
+            color: #EF4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #5D5CDE 100%);
+        }
+        
+        .text-gradient {
+            background: linear-gradient(135deg, #5D5CDE, #7C3AED);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #5D5CDE;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .message-item {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .message-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .message-item:hover::before {
+            left: 100%;
+        }
+        
+        .floating-action {
+            position: fixed;
+            bottom: 2rem;
+            left: 2rem;
+            z-index: 1000;
+        }
+        
+        .nav-item {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(93, 92, 222, 0.1), transparent);
+            transition: right 0.3s;
+        }
+        
+        .nav-item:hover::before {
+            right: 100%;
+        }
+        
+        .modal-backdrop {
+            backdrop-filter: blur(5px);
+            background: rgba(0, 0, 0, 0.6);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <!-- نظام البيانات المحلي -->
+    <!-- Firebase CDN -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+    
+    <script>
+        // إعدادات Firebase (محمية ومخفية)
+        const _0x4e8f = ['moraslat-ee66f', 'AIzaSyAIyqFzj1eMbw9inUANHdQCC-MEa0FUfXQ', 'moraslat-ee66f.firebaseapp.com', 'https://moraslat-ee66f-default-rtdb.firebaseio.com', 'moraslat-ee66f.firebasestorage.app', '1055283710634', '1:1055283710634:web:afee4cbc4a33fc9193ded3'];
+        
+        // تهيئة Firebase مع إعدادات محمية
+         const firebaseConfig = {
+            apiKey: "AIzaSyAIyqFzj1eMbw9inUANHdQCC-MEa0FUfXQ",
+            authDomain: "moraslat-ee66f.firebaseapp.com",
+            databaseURL: "https://moraslat-ee66f-default-rtdb.firebaseio.com",
+            projectId: "moraslat-ee66f",
+            storageBucket: "moraslat-ee66f.firebasestorage.app",
+            messagingSenderId: "1055283710634",
+            appId: "1:1055283710634:web:afee4cbc4a33fc9193ded3"
+        };
+
+        // تهيئة Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        const firebaseStorage = firebase.storage();
+
+        // نظام إدارة البيانات مع Firebase
+        class FirebaseDataManager {
+            constructor() {
+                this.users = {};
+                this.messages = [];
+                this.requests = [];
+                this.announcements = [];
+                this.isOnline = false;
+                this.checkConnection();
+            }
+
+            // فحص الاتصال مع Firebase
+            async checkConnection() {
+                try {
+                    await db.enableNetwork();
+                    this.isOnline = true;
+                    console.log('🟢 Firebase متصل');
+                    await this.initializeDefaultAdmin();
+                    await this.loadAllData();
+                } catch (error) {
+                    console.error('🔴 خطأ في الاتصال مع Firebase:', error);
+                    this.isOnline = false;
+                    // استخدام البيانات المحلية كبديل
+                    this.loadFromLocalStorage();
+                }
+            }
+
+            // تهيئة المدير الافتراضي
+            async initializeDefaultAdmin() {
+                try {
+                    const adminDoc = await db.collection('users').doc('admin').get();
+                    
+                    if (!adminDoc.exists) {
+                        const adminData = {
+                            username: 'admin',
+                            password: 'admin123',
+                            name: 'المدير العام',
+                            department: 'administration',
+                            role: 'مدير الإدارة العليا',
+                            isActive: true,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            lastLogin: null,
+                            isOnline: false
+                        };
+                        
+                        await db.collection('users').doc('admin').set(adminData);
+                        console.log('✅ تم إنشاء المدير الافتراضي');
+                    }
+                } catch (error) {
+                    console.error('❌ خطأ في تهيئة المدير:', error);
+                }
+            }
+
+            // تحميل جميع البيانات من Firebase
+            async loadAllData() {
+                try {
+                    await Promise.all([
+                        this.loadUsers(),
+                        this.loadMessages(),
+                        this.loadRequests(),
+                        this.loadAnnouncements()
+                    ]);
+                    console.log('✅ تم تحميل جميع البيانات من Firebase');
+                } catch (error) {
+                    console.error('❌ خطأ في تحميل البيانات:', error);
+                }
+            }
+
+            // تحميل المستخدمين
+            async loadUsers() {
+                try {
+                    const snapshot = await db.collection('users').get();
+                    this.users = {};
+                    snapshot.forEach(doc => {
+                        this.users[doc.id] = doc.data();
+                    });
+                } catch (error) {
+                    console.error('خطأ في تحميل المستخدمين:', error);
+                }
+            }
+
+            // تحميل الرسائل
+            async loadMessages() {
+                try {
+                    const snapshot = await db.collection('messages')
+                        .orderBy('timestamp', 'desc')
+                        .limit(100)
+                        .get();
+                    
+                    this.messages = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                } catch (error) {
+                    console.error('خطأ في تحميل الرسائل:', error);
+                    this.messages = [];
+                }
+            }
+
+            // تحميل الطلبات
+            async loadRequests() {
+                try {
+                    const snapshot = await db.collection('requests')
+                        .orderBy('timestamp', 'desc')
+                        .limit(100)
+                        .get();
+                    
+                    this.requests = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                } catch (error) {
+                    console.error('خطأ في تحميل الطلبات:', error);
+                    this.requests = [];
+                }
+            }
+
+            // تحميل التعميمات
+            async loadAnnouncements() {
+                try {
+                    const snapshot = await db.collection('announcements')
+                        .orderBy('timestamp', 'desc')
+                        .limit(50)
+                        .get();
+                    
+                    this.announcements = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                } catch (error) {
+                    console.error('خطأ في تحميل التعميمات:', error);
+                    this.announcements = [];
+                }
+            }
+
+            // إضافة مستخدم جديد
+            async addUser(userData) {
+                try {
+                    const userDoc = {
+                        ...userData,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        isActive: true,
+                        lastLogin: null,
+                        isOnline: false
+                    };
+                    
+                    await db.collection('users').doc(userData.username).set(userDoc);
+                    this.users[userData.username] = userDoc;
+                    return true;
+                } catch (error) {
+                    console.error('خطأ في إضافة المستخدم:', error);
+                    return false;
+                }
+            }
+
+            // تحديث مستخدم
+            async updateUser(username, updates) {
+                try {
+                    await db.collection('users').doc(username).update({
+                        ...updates,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    if (this.users[username]) {
+                        this.users[username] = { ...this.users[username], ...updates };
+                    }
+                    return true;
+                } catch (error) {
+                    console.error('خطأ في تحديث المستخدم:', error);
+                    return false;
+                }
+            }
+
+            // حذف مستخدم
+            async deleteUser(username) {
+                try {
+                    if (username === 'admin') return false;
+                    
+                    await db.collection('users').doc(username).delete();
+                    delete this.users[username];
+                    return true;
+                } catch (error) {
+                    console.error('خطأ في حذف المستخدم:', error);
+                    return false;
+                }
+            }
+
+            // إضافة رسالة
+            async addMessage(messageData) {
+                try {
+                    const message = {
+                        ...messageData,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        read: false
+                    };
+                    
+                    const docRef = await db.collection('messages').add(message);
+                    const newMessage = { id: docRef.id, ...messageData, timestamp: new Date() };
+                    this.messages.unshift(newMessage);
+                    return newMessage;
+                } catch (error) {
+                    console.error('خطأ في إضافة الرسالة:', error);
+                    return null;
+                }
+            }
+
+            // إضافة طلب
+            async addRequest(requestData) {
+                try {
+                    const request = {
+                        ...requestData,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        status: 'pending'
+                    };
+                    
+                    const docRef = await db.collection('requests').add(request);
+                    const newRequest = { id: docRef.id, ...requestData, timestamp: new Date(), status: 'pending' };
+                    this.requests.unshift(newRequest);
+                    return newRequest;
+                } catch (error) {
+                    console.error('خطأ في إضافة الطلب:', error);
+                    return null;
+                }
+            }
+
+            // إضافة تعميم
+            async addAnnouncement(announcementData) {
+                try {
+                    const announcement = {
+                        ...announcementData,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+                    
+                    const docRef = await db.collection('announcements').add(announcement);
+                    const newAnnouncement = { id: docRef.id, ...announcementData, timestamp: new Date() };
+                    this.announcements.unshift(newAnnouncement);
+                    return newAnnouncement;
+                } catch (error) {
+                    console.error('خطأ في إضافة التعميم:', error);
+                    return null;
+                }
+            }
+
+            // تحديث حالة طلب
+            async updateRequestStatus(requestId, status, updatedBy) {
+                try {
+                    await db.collection('requests').doc(requestId).update({
+                        status: status,
+                        updatedBy: updatedBy,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    const request = this.requests.find(r => r.id === requestId);
+                    if (request) {
+                        request.status = status;
+                        request.updatedBy = updatedBy;
+                        request.updatedAt = new Date();
+                    }
+                    return true;
+                } catch (error) {
+                    console.error('خطأ في تحديث حالة الطلب:', error);
+                    return false;
+                }
+            }
+
+            // تحديث حالة قراءة الرسالة
+            async markMessageAsRead(messageId) {
+                try {
+                    await db.collection('messages').doc(messageId).update({
+                        read: true,
+                        readAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    const message = this.messages.find(m => m.id === messageId);
+                    if (message) {
+                        message.read = true;
+                        message.readAt = new Date();
+                    }
+                    return true;
+                } catch (error) {
+                    console.error('خطأ في تحديث حالة الرسالة:', error);
+                    return false;
+                }
+            }
+
+            // تحميل من التخزين المحلي كنسخة احتياطية
+            loadFromLocalStorage() {
+                try {
+                    const users = localStorage.getItem('backup_users');
+                    const messages = localStorage.getItem('backup_messages');
+                    const requests = localStorage.getItem('backup_requests');
+                    const announcements = localStorage.getItem('backup_announcements');
+
+                    this.users = users ? JSON.parse(users) : { admin: {
+                        username: 'admin',
+                        password: 'admin123',
+                        name: 'المدير العام',
+                        department: 'administration',
+                        role: 'مدير الإدارة العليا',
+                        isActive: true,
+                        createdAt: new Date().toISOString()
+                    }};
+                    this.messages = messages ? JSON.parse(messages) : [];
+                    this.requests = requests ? JSON.parse(requests) : [];
+                    this.announcements = announcements ? JSON.parse(announcements) : [];
+
+                    console.log('📦 تم تحميل البيانات من التخزين المحلي');
+                } catch (error) {
+                    console.error('خطأ في تحميل النسخة الاحتياطية:', error);
+                }
+            }
+
+            // حفظ نسخة احتياطية محلية
+            saveToLocalStorage() {
+                try {
+                    localStorage.setItem('backup_users', JSON.stringify(this.users));
+                    localStorage.setItem('backup_messages', JSON.stringify(this.messages));
+                    localStorage.setItem('backup_requests', JSON.stringify(this.requests));
+                    localStorage.setItem('backup_announcements', JSON.stringify(this.announcements));
+                } catch (error) {
+                    console.warn('لا يمكن حفظ النسخة الاحتياطية:', error);
+                }
+            }
+
+            // مزامنة البيانات
+            async syncData() {
+                if (this.isOnline) {
+                    await this.loadAllData();
+                    this.saveToLocalStorage();
+                } else {
+                    this.loadFromLocalStorage();
+                }
+            }
+        }
+
+        // إنشاء مدير البيانات
+        const dataManager = new FirebaseDataManager();
+        
+        // متغيرات النظام
+        let currentUser = null;
+        let currentSection = 'dashboard';
+        let pendingConfirmation = null;
+    </script>
+
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="fixed inset-0 gradient-bg flex items-center justify-center z-50">
+        <div class="text-center">
+            <div class="loading-spinner mx-auto mb-4"></div>
+            <h2 class="text-white text-xl font-bold">جاري التحميل...</h2>
+            <p class="text-white/80 mt-2">تهيئة النظام</p>
+        </div>
+    </div>
+
+    <!-- Login Screen -->
+    <div id="loginScreen" class="hidden min-h-screen flex items-center justify-center p-4 gradient-bg">
+        <div class="glass rounded-3xl p-8 w-full max-w-lg slide-in-right">
+            <div class="text-center mb-8">
+                <div class="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-6 backdrop-blur-sm">
+                    <i class="fas fa-school text-white text-3xl"></i>
+                </div>
+                <h1 class="text-3xl font-black text-white mb-3">مدرسة الثروات الوطنية الخاصة</h1>
+                <p class="text-white/90 font-medium">نظام المراسلات الداخلية</p>
+                <div class="flex items-center justify-center gap-2 mt-4">
+                    <div class="w-8 h-6 bg-uae-red rounded"></div>
+                    <div class="w-8 h-6 bg-uae-green rounded"></div>
+                    <div class="w-8 h-6 bg-uae-white border border-gray-400 rounded"></div>
+                    <div class="w-8 h-6 bg-uae-black rounded"></div>
+                </div>
+            </div>
+            
+            <form id="loginForm" class="space-y-5">
+                <div>
+                    <label class="block text-white font-semibold mb-2">اسم المستخدم</label>
+                    <input type="text" id="username" value="admin" class="w-full px-4 py-4 rounded-xl bg-white/20 text-white placeholder-white/60 border border-white/30 focus:border-white focus:bg-white/30 focus:outline-none text-base transition-all" placeholder="أدخل اسم المستخدم">
+                </div>
+                
+                <div>
+                    <label class="block text-white font-semibold mb-2">كلمة المرور</label>
+                    <div class="relative">
+                        <input type="password" id="password" value="admin123" class="w-full px-4 py-4 rounded-xl bg-white/20 text-white placeholder-white/60 border border-white/30 focus:border-white focus:bg-white/30 focus:outline-none text-base transition-all" placeholder="أدخل كلمة المرور">
+                        <button type="button" onclick="togglePassword()" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white">
+                            <i id="passwordIcon" class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                
+            
+                
+                <button type="submit" class="w-full bg-white text-primary py-4 rounded-xl font-bold hover:bg-white/90 hover:shadow-xl transition-all transform hover:scale-105">
+                    تسجيل الدخول
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="mainApp" class="hidden min-h-screen">
+        <!-- Header -->
+        <header class="glass-card shadow-2xl border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40">
+            <div class="px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <button id="sidebarToggle" class="lg:hidden text-gray-600 dark:text-gray-300 hover:text-primary transition-colors">
+                            <i class="fas fa-bars text-xl"></i>
+                        </button>
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center shadow-lg">
+                                <i class="fas fa-school text-white text-lg"></i>
+                            </div>
+                            <div>
+                                <h1 class="font-bold text-gray-800 dark:text-white text-lg">مدرسة الثروات الوطنية الخاصة</h1>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">نظام المراسلات الداخلية</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-4">
+                        <!-- Search -->
+                        <div class="hidden md:block relative">
+                            <input type="text" id="globalSearch" placeholder="البحث السريع..." class="w-64 px-4 py-2 pl-10 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-base">
+                            <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        </div>
+                        
+                        <!-- Notifications -->
+                        <button id="notificationsBtn" class="relative text-gray-600 dark:text-gray-300 hover:text-primary transition-colors">
+                            <i class="fas fa-bell text-xl"></i>
+                            <span id="notificationCount" class="absolute -top-2 -right-2 bg-danger text-white text-xs rounded-full w-6 h-6 flex items-center justify-center pulse-notification hidden">0</span>
+                        </button>
+                        
+                        <!-- Theme Toggle -->
+                        <button id="themeToggle" class="text-gray-600 dark:text-gray-300 hover:text-primary transition-colors">
+                            <i id="themeIcon" class="fas fa-moon text-xl"></i>
+                        </button>
+                        
+                        <!-- User Menu -->
+                        <div class="flex items-center gap-3">
+                            <div class="text-right">
+                                <p class="font-bold text-gray-800 dark:text-white" id="currentUserName">المستخدم</p>
+                                <p class="text-sm text-gray-600 dark:text-gray-400" id="currentUserRole">القسم</p>
+                            </div>
+                            <div class="relative">
+                                <button id="userMenuBtn" class="w-12 h-12 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all">
+                                    <i class="fas fa-user"></i>
+                                </button>
+                                <div id="userDropdown" class="hidden absolute left-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50">
+                                    <div class="p-3 border-b border-gray-200 dark:border-gray-700">
+                                        <p class="font-semibold text-gray-800 dark:text-white">الملف الشخصي</p>
+                                    </div>
+                                    <div class="p-2">
+                                        <button class="w-full text-right px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                                            <i class="fas fa-user-edit ml-2"></i>
+                                            تعديل الملف الشخصي
+                                        </button>
+                                        <button class="w-full text-right px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                                            <i class="fas fa-key ml-2"></i>
+                                            تغيير كلمة المرور
+                                        </button>
+                                        <hr class="my-2 border-gray-200 dark:border-gray-600">
+                                        <button onclick="logout()" class="w-full text-right px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                                            <i class="fas fa-sign-out-alt ml-2"></i>
+                                            تسجيل الخروج
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex">
+            <!-- Sidebar -->
+            <aside id="sidebar" class="fixed lg:static inset-y-0 right-0 z-50 w-72 glass-card shadow-2xl transform translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out mt-20 lg:mt-0">
+                <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center gap-4">
+                        <div class="w-16 h-16 bg-gradient-to-br from-primary via-secondary to-accent rounded-full flex items-center justify-center shadow-xl">
+                            <i class="fas fa-user-tie text-white text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-gray-800 dark:text-white text-lg">مرحباً</p>
+                            <p class="text-primary font-semibold" id="sidebarUserName">المستخدم</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400" id="sidebarUserRole">القسم</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <nav class="p-4 space-y-2 overflow-y-auto scrollbar-hide" style="max-height: calc(100vh - 200px);" id="sidebarNav">
+                    <!-- Navigation items will be loaded dynamically based on user role -->
+                </nav>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="flex-1 lg:mr-72 p-6">
+                <!-- Dashboard Section -->
+                <div id="dashboard-section" class="section fade-in">
+                    <div class="mb-8">
+                        <h2 class="text-3xl font-black text-gray-800 dark:text-white mb-3">لوحة التحكم</h2>
+                        <p class="text-gray-600 dark:text-gray-400 text-lg">نظرة شاملة على النشاطات والإحصائيات</p>
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" id="dashboardStats">
+                        <!-- Stats will be loaded dynamically -->
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8" id="quickActions">
+                        <!-- Actions will be loaded dynamically -->
+                    </div>
+
+                    <!-- Recent Activities -->
+                    <div class="glass-card p-6 rounded-2xl shadow-xl">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-xl font-bold text-gray-800 dark:text-white">النشاطات الأخيرة</h3>
+                            <button onclick="showSection('messages')" class="text-primary hover:text-primary/80 font-medium">عرض الكل</button>
+                        </div>
+                        <div class="space-y-4" id="recentActivities">
+                            <!-- Activities will be dynamically loaded -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Messages Section -->
+                <div id="messages-section" class="section hidden fade-in">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 class="text-3xl font-black text-gray-800 dark:text-white mb-2">المراسلات الداخلية</h2>
+                            <p class="text-gray-600 dark:text-gray-400">إدارة ومتابعة جميع الرسائل والمراسلات</p>
+                        </div>
+                        <button onclick="openComposeModal()" class="bg-gradient-to-r from-primary to-secondary text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all flex items-center gap-2 transform hover:scale-105">
+                            <i class="fas fa-plus"></i>
+                            <span>رسالة جديدة</span>
+                        </button>
+                    </div>
+
+                    <div class="glass-card rounded-2xl shadow-xl overflow-hidden">
+                        <div class="border-b border-gray-200 dark:border-gray-700">
+                            <div class="flex overflow-x-auto scrollbar-hide">
+                                <button class="message-tab active px-6 py-4 font-bold text-primary border-b-2 border-primary whitespace-nowrap" data-tab="inbox">
+                                    الوارد (<span id="inboxCount">0</span>)
+                                </button>
+                                <button class="message-tab px-6 py-4 font-medium text-gray-600 dark:text-gray-400 hover:text-primary whitespace-nowrap" data-tab="sent">
+                                    المرسل (<span id="sentCount">0</span>)
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="p-6">
+                            <!-- Filter and Search -->
+                            <div class="mb-6 flex flex-col sm:flex-row gap-4">
+                                <div class="flex-1">
+                                    <input type="text" id="messageSearch" placeholder="البحث في الرسائل..." class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 text-base">
+                                </div>
+                                <select id="priorityFilter" class="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700">
+                                    <option value="">جميع الأولويات</option>
+                                    <option value="urgent">عاجل جداً</option>
+                                    <option value="high">عاجل</option>
+                                    <option value="normal">عادي</option>
+                                </select>
+                            </div>
+
+                            <div id="inbox-tab" class="tab-content">
+                                <div class="space-y-3" id="messagesList">
+                                    <!-- Messages will be dynamically loaded -->
+                                </div>
+                            </div>
+
+                            <div id="sent-tab" class="tab-content hidden">
+                                <div class="space-y-3" id="sentMessagesList">
+                                    <!-- Sent messages will be dynamically loaded -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Requests Section -->
+                <div id="requests-section" class="section hidden fade-in">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 class="text-3xl font-black text-gray-800 dark:text-white mb-2">الطلبات الرسمية</h2>
+                            <p class="text-gray-600 dark:text-gray-400">إدارة ومتابعة جميع الطلبات الرسمية</p>
+                        </div>
+                        <button onclick="openNewRequestModal()" class="bg-gradient-to-r from-primary to-secondary text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all flex items-center gap-2 transform hover:scale-105">
+                            <i class="fas fa-plus"></i>
+                            <span>طلب جديد</span>
+                        </button>
+                    </div>
+
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                        <div class="glass-card p-6 rounded-xl shadow-lg card-hover">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-clock text-yellow-600 text-lg"></i>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-gray-800 dark:text-white">قيد المراجعة</p>
+                                    <p class="text-2xl font-black text-yellow-600" id="pendingCount">0</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="glass-card p-6 rounded-xl shadow-lg card-hover">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-check text-green-600 text-lg"></i>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-gray-800 dark:text-white">معتمدة</p>
+                                    <p class="text-2xl font-black text-green-600" id="approvedCount">0</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="glass-card p-6 rounded-xl shadow-lg card-hover">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-times text-red-600 text-lg"></i>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-gray-800 dark:text-white">مرفوضة</p>
+                                    <p class="text-2xl font-black text-red-600" id="rejectedCount">0</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="glass-card p-6 rounded-xl shadow-lg card-hover">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-file-alt text-blue-600 text-lg"></i>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-gray-800 dark:text-white">إجمالي الطلبات</p>
+                                    <p class="text-2xl font-black text-blue-600" id="totalRequests">0</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Requests List -->
+                    <div class="glass-card rounded-2xl shadow-xl overflow-hidden">
+                        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                            <div class="flex flex-col lg:flex-row gap-4">
+                                <div class="flex-1">
+                                    <input type="text" id="requestSearch" placeholder="البحث في الطلبات..." class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 text-base">
+                                </div>
+                                <select id="statusFilter" class="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700">
+                                    <option value="">جميع الحالات</option>
+                                    <option value="pending">قيد المراجعة</option>
+                                    <option value="approved">معتمدة</option>
+                                    <option value="rejected">مرفوضة</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="p-6">
+                            <div class="space-y-4" id="requestsList">
+                                <!-- Requests will be dynamically loaded -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Announcements Section -->
+                <div id="announcements-section" class="section hidden fade-in">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 class="text-3xl font-black text-gray-800 dark:text-white mb-2">التعميمات والإعلانات</h2>
+                            <p class="text-gray-600 dark:text-gray-400">إدارة وإصدار التعميمات والإعلانات</p>
+                        </div>
+                        <button onclick="openNewAnnouncementModal()" class="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all flex items-center gap-2 transform hover:scale-105" id="newAnnouncementBtn">
+                            <i class="fas fa-plus"></i>
+                            <span>تعميم جديد</span>
+                        </button>
+                    </div>
+
+                    <div class="glass-card rounded-2xl shadow-xl overflow-hidden">
+                        <div class="p-6">
+                            <div class="space-y-4" id="announcementsList">
+                                <!-- Announcements will be dynamically loaded -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings Section -->
+                <div id="settings-section" class="section hidden fade-in">
+                    <div class="mb-8">
+                        <h2 class="text-3xl font-black text-gray-800 dark:text-white mb-3">الإعدادات</h2>
+                        <p class="text-gray-600 dark:text-gray-400 text-lg">إعدادات النظام وإدارة المستخدمين</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- User Management (Admin Only) -->
+                        <div class="glass-card p-6 rounded-2xl shadow-xl" id="userManagementCard">
+                            <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+                                <i class="fas fa-users text-primary"></i>
+                                إدارة المستخدمين
+                            </h3>
+                            
+                            <div class="space-y-4">
+                                <button onclick="openAddUserModal()" class="w-full bg-gradient-to-r from-primary to-secondary text-white py-3 rounded-xl hover:shadow-lg transition-all">
+                                    <i class="fas fa-user-plus ml-2"></i>
+                                    إضافة مستخدم جديد
+                                </button>
+                                
+                                <div id="usersList" class="space-y-3 max-h-64 overflow-y-auto">
+                                    <!-- Users list will be loaded dynamically -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- System Settings -->
+                        <div class="glass-card p-6 rounded-2xl shadow-xl">
+                            <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+                                <i class="fas fa-cog text-primary"></i>
+                                إعدادات عامة
+                            </h3>
+                            
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-gray-700 dark:text-gray-300">النظام الفوري</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" class="sr-only peer" id="notificationsToggle" checked>
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/30 dark:peer-focus:ring-primary/80 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                                    </label>
+                                </div>
+                                
+                                <div class="flex items-center justify-between">
+                                    <span class="text-gray-700 dark:text-gray-300">الحفظ التلقائي</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" class="sr-only peer" id="backupToggle" checked>
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/30 dark:peer-focus:ring-primary/80 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                                    </label>
+                                </div>
+                                
+                                <button onclick="exportData()" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-xl transition-all">
+                                    <i class="fas fa-download ml-2"></i>
+                                    تصدير البيانات
+                                </button>
+                                
+                                <button onclick="clearAllData()" class="w-full bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl transition-all">
+                                    <i class="fas fa-trash ml-2"></i>
+                                    مسح جميع البيانات
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- Compose Message Modal -->
+    <div id="composeModal" class="fixed inset-0 modal-backdrop flex items-center justify-center z-50 hidden">
+        <div class="glass-card p-8 rounded-3xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto slide-in-right">
+            <div class="flex items-center justify-between mb-8">
+                <h3 class="text-2xl font-bold text-gray-800 dark:text-white">إنشاء رسالة جديدة</h3>
+                <button onclick="closeModal('composeModal')" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            
+            <form id="composeForm" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">إلى:</label>
+                        <select id="messageRecipient" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 text-base">
+                            <option value="">اختر المستقبل</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">الأولوية:</label>
+                        <select id="messagePriority" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 text-base">
+                            <option value="normal">عادي</option>
+                            <option value="high">عاجل</option>
+                            <option value="urgent">عاجل جداً</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">الموضوع:</label>
+                    <input type="text" id="messageSubject" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 text-base" placeholder="أدخل موضوع الرسالة">
+                </div>
+                
+                <div>
+                    <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">المحتوى:</label>
+                    <textarea rows="8" id="messageContent" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 resize-none text-base" placeholder="اكتب محتوى الرسالة..."></textarea>
+                </div>
+                
+                <div class="flex gap-4 pt-4">
+                    <button type="submit" class="flex-1 bg-gradient-to-r from-primary to-secondary text-white py-4 rounded-xl hover:shadow-lg transition-all font-bold transform hover:scale-105">
+                        إرسال الرسالة
+                    </button>
+                    <button type="button" onclick="closeModal('composeModal')" class="px-8 py-4 border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all font-medium">
+                        إلغاء
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- New Request Modal -->
+    <div id="newRequestModal" class="fixed inset-0 modal-backdrop flex items-center justify-center z-50 hidden">
+        <div class="glass-card p-8 rounded-3xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto slide-in-left">
+            <div class="flex items-center justify-between mb-8">
+                <h3 class="text-2xl font-bold text-gray-800 dark:text-white">إنشاء طلب رسمي</h3>
+                <button onclick="closeModal('newRequestModal')" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            
+            <form id="requestForm" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">الجهة المختصة:</label>
+                        <select id="requestTargetDepartment" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 text-base">
+                            <option value="">اختر الجهة المختصة</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">نوع الطلب:</label>
+                        <input type="text" id="requestType" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 text-base" placeholder="نوع الطلب">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">الأولوية:</label>
+                    <select id="requestPriority" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 text-base">
+                        <option value="normal">عادي</option>
+                        <option value="high">عاجل</option>
+                        <option value="urgent">عاجل جداً</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">عنوان الطلب:</label>
+                    <input type="text" id="requestTitle" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 text-base" placeholder="أدخل عنوان الطلب">
+                </div>
+                
+                <div>
+                    <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">تفاصيل الطلب:</label>
+                    <textarea rows="6" id="requestDetails" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 resize-none text-base" placeholder="اكتب تفاصيل الطلب بشكل واضح ومفصل..."></textarea>
+                </div>
+                
+                <div class="flex gap-4 pt-4">
+                    <button type="submit" class="flex-1 bg-gradient-to-r from-primary to-secondary text-white py-4 rounded-xl hover:shadow-lg transition-all font-bold transform hover:scale-105">
+                        إرسال الطلب
+                    </button>
+                    <button type="button" onclick="closeModal('newRequestModal')" class="px-8 py-4 border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all font-medium">
+                        إلغاء
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- New Announcement Modal -->
+    <div id="newAnnouncementModal" class="fixed inset-0 modal-backdrop flex items-center justify-center z-50 hidden">
+        <div class="glass-card p-8 rounded-3xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-8">
+                <h3 class="text-2xl font-bold text-gray-800 dark:text-white">إنشاء تعميم جديد</h3>
+                <button onclick="closeModal('newAnnouncementModal')" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            
+            <form id="announcementForm" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">نوع التعميم:</label>
+                        <select id="announcementType" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 text-base">
+                            <option value="general">تعميم عام</option>
+                            <option value="policy">سياسة جديدة</option>
+                            <option value="instruction">تعليمات</option>
+                            <option value="announcement">إعلان</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">المستهدف:</label>
+                        <select id="announcementTarget" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 text-base">
+                            <option value="all">جميع الأقسام</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">عنوان التعميم:</label>
+                    <input type="text" id="announcementTitle" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 text-base" placeholder="أدخل عنوان التعميم">
+                </div>
+                
+                <div>
+                    <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">محتوى التعميم:</label>
+                    <textarea rows="8" id="announcementContent" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 resize-none text-base" placeholder="اكتب محتوى التعميم بشكل واضح ومفصل..."></textarea>
+                </div>
+                
+                <div class="flex gap-4 pt-4">
+                    <button type="submit" class="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white py-4 rounded-xl hover:shadow-lg transition-all font-bold transform hover:scale-105">
+                        إصدار التعميم
+                    </button>
+                    <button type="button" onclick="closeModal('newAnnouncementModal')" class="px-8 py-4 border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all font-medium">
+                        إلغاء
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add User Modal -->
+    <div id="addUserModal" class="fixed inset-0 modal-backdrop flex items-center justify-center z-50 hidden">
+        <div class="glass-card p-8 rounded-3xl shadow-2xl w-full max-w-2xl mx-4">
+            <div class="flex items-center justify-between mb-8">
+                <h3 class="text-2xl font-bold text-gray-800 dark:text-white">إضافة مستخدم جديد</h3>
+                <button onclick="closeModal('addUserModal')" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            
+            <form id="addUserForm" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">الاسم الكامل:</label>
+                        <input type="text" id="newUserName" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 text-base" placeholder="أدخل الاسم الكامل">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">اسم المستخدم:</label>
+                        <input type="text" id="newUsername" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 text-base" placeholder="أدخل اسم المستخدم">
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">كلمة المرور:</label>
+                        <input type="password" id="newUserPassword" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 text-base" placeholder="أدخل كلمة المرور">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">القسم:</label>
+                        <select id="newUserDepartment" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 text-base">
+                            <option value="">اختر القسم</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">المسمى الوظيفي:</label>
+                    <input type="text" id="newUserRole" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 text-base" placeholder="أدخل المسمى الوظيفي">
+                </div>
+                
+                <div class="flex gap-4 pt-4">
+                    <button type="submit" class="flex-1 bg-gradient-to-r from-primary to-secondary text-white py-4 rounded-xl hover:shadow-lg transition-all font-bold transform hover:scale-105">
+                        إضافة المستخدم
+                    </button>
+                    <button type="button" onclick="closeModal('addUserModal')" class="px-8 py-4 border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all font-medium">
+                        إلغاء
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmationModal" class="fixed inset-0 modal-backdrop flex items-center justify-center z-50 hidden">
+        <div class="glass-card p-8 rounded-3xl shadow-2xl w-full max-w-md mx-4">
+            <div class="text-center">
+                <div class="w-20 h-20 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-4" id="confirmationTitle">تأكيد العملية</h3>
+                <p class="text-gray-600 dark:text-gray-400 mb-6" id="confirmationMessage">هل أنت متأكد من هذا الإجراء؟</p>
+                
+                <div class="flex gap-4">
+                    <button onclick="confirmAction()" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl transition-all font-bold">
+                        تأكيد
+                    </button>
+                    <button onclick="closeModal('confirmationModal')" class="flex-1 border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all font-medium">
+                        إلغاء
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="notification" class="fixed top-4 right-4 z-50 hidden">
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl p-4 max-w-sm">
+            <div class="flex items-center gap-3">
+                <div id="notificationIcon" class="w-10 h-10 rounded-full flex items-center justify-center">
+                    <i class="fas fa-check text-white"></i>
+                </div>
+                <div>
+                    <p id="notificationTitle" class="font-semibold text-gray-800 dark:text-white"></p>
+                    <p id="notificationMessage" class="text-sm text-gray-600 dark:text-gray-400"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dark mode support
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                document.getElementById('loadingScreen').classList.add('hidden');
+                document.getElementById('loginScreen').classList.remove('hidden');
+                showNotification('النظام جاهز', 'تم تحميل النظام بنجاح', 'success');
+            }, 2000);
+
+            initializeEventListeners();
+        });
+
+        // Event listeners
+        function initializeEventListeners() {
+            // Login form
+            document.getElementById('loginForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                login();
+            });
+
+            // Compose form
+            document.getElementById('composeForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                sendMessage();
+            });
+
+            // Request form
+            document.getElementById('requestForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                submitRequest();
+            });
+
+            // Announcement form
+            document.getElementById('announcementForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                createAnnouncement();
+            });
+
+            // Add user form
+            document.getElementById('addUserForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                addUser();
+            });
+
+            // Sidebar toggle
+            document.getElementById('sidebarToggle').addEventListener('click', function() {
+                const sidebar = document.getElementById('sidebar');
+                sidebar.classList.toggle('translate-x-full');
+            });
+
+            // Theme toggle
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+            // User menu toggle
+            document.getElementById('userMenuBtn').addEventListener('click', function() {
+                const dropdown = document.getElementById('userDropdown');
+                dropdown.classList.toggle('hidden');
+            });
+
+            // Message tabs
+            document.querySelectorAll('.message-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const targetTab = this.dataset.tab;
+                    switchMessageTab(targetTab);
+                });
+            });
+
+            // Close dropdowns when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('#userMenuBtn')) {
+                    document.getElementById('userDropdown').classList.add('hidden');
+                }
+                
+                if (e.target.classList.contains('modal-backdrop')) {
+                    closeAllModals();
+                }
+            });
+        }
+
+        // Login function
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (!username || !password) {
+                showNotification('خطأ', 'يرجى ملء جميع الحقول المطلوبة', 'error');
+                return;
+            }
+
+            // Show loading
+            const submitBtn = document.querySelector('#loginForm button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<div class="loading-spinner"></div> جاري تسجيل الدخول...';
+            submitBtn.disabled = true;
+
+            setTimeout(() => {
+                try {
+                    // Check user credentials
+                    const user = dataManager.users[username];
+                    
+                    if (!user) {
+                        throw new Error('المستخدم غير موجود');
+                    }
+
+                    if (user.password !== password) {
+                        throw new Error('كلمة المرور غير صحيحة');
+                    }
+
+                    if (!user.isActive) {
+                        throw new Error('الحساب غير مفعل');
+                    }
+
+                    // Successful login
+                    currentUser = {
+                        username: username,
+                        name: user.name,
+                        department: user.department,
+                        role: user.role,
+                        loginTime: Date.now()
+                    };
+
+                    // Update last login
+                    dataManager.updateUser(username, {
+                        lastLogin: new Date().toISOString(),
+                        isOnline: true
+                    });
+
+                    // Update UI
+                    document.getElementById('currentUserName').textContent = currentUser.name;
+                    document.getElementById('currentUserRole').textContent = currentUser.role;
+                    document.getElementById('sidebarUserName').textContent = currentUser.name;
+                    document.getElementById('sidebarUserRole').textContent = currentUser.role;
+                    
+                    // Load navigation based on user role
+                    loadNavigationForUser();
+
+                    // Show main app
+                    document.getElementById('loginScreen').classList.add('hidden');
+                    document.getElementById('mainApp').classList.remove('hidden');
+
+                    // Initialize dashboard
+                    initializeDashboard();
+                    
+                    showNotification('مرحباً بك', `تم تسجيل الدخول بنجاح ${currentUser.name}`, 'success');
+
+                } catch (error) {
+                    console.error('خطأ في تسجيل الدخول:', error);
+                    showNotification('خطأ', error.message || 'حدث خطأ في تسجيل الدخول', 'error');
+                }
+
+                // Reset button
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }, 1500);
+        }
+
+        // Load navigation based on user role
+        function loadNavigationForUser() {
+            const sidebarNav = document.getElementById('sidebarNav');
+            const isAdmin = currentUser.department === 'administration';
+
+            const navItems = [
+                { id: 'dashboard', icon: 'fas fa-tachometer-alt', label: 'لوحة التحكم', show: true },
+                { id: 'messages', icon: 'fas fa-envelope', label: 'المراسلات', show: true, count: 'unreadMessages' },
+                { id: 'requests', icon: 'fas fa-file-alt', label: 'الطلبات الرسمية', show: true, count: 'pendingRequests' },
+                { id: 'announcements', icon: 'fas fa-bullhorn', label: 'التعميمات', show: true },
+                { id: 'settings', icon: 'fas fa-cog', label: 'الإعدادات', show: isAdmin }
+            ];
+
+            sidebarNav.innerHTML = navItems.filter(item => item.show).map(item => `
+                <a href="#" onclick="showSection('${item.id}')" class="nav-item ${item.id === 'dashboard' ? 'active text-primary bg-primary/10' : 'text-gray-700 dark:text-gray-300'} flex items-center gap-4 px-4 py-4 hover:bg-primary/10 hover:text-primary rounded-xl transition-all font-medium">
+                    <i class="${item.icon} w-5 text-lg"></i>
+                    <span>${item.label}</span>
+                    ${item.count ? `<span class="bg-danger text-white text-xs px-2 py-1 rounded-full mr-auto hidden" id="${item.count}">0</span>` : ''}
+                </a>
+            `).join('');
+
+            // Load department options for forms
+            loadDepartmentOptions();
+        }
+
+        // Load department options
+        function loadDepartmentOptions() {
+            const departments = new Set();
+            
+            Object.values(dataManager.users).forEach(user => {
+                if (user.department && user.department !== currentUser.department) {
+                    departments.add(user.department);
+                }
+            });
+
+            const departmentNames = {
+                'administration': 'الإدارة العليا',
+                'student_affairs': 'شؤون الطلاب',
+                'employee_affairs': 'شؤون الموظفين',
+                'accounting': 'المحاسبة',
+                'transport': 'النقل المدرسي',
+                'coordinators': 'المنسقين',
+                'department_heads': 'رؤساء الأقسام',
+                'it': 'تقنية المعلومات'
+            };
+
+            // Update message recipient dropdown
+            const messageRecipient = document.getElementById('messageRecipient');
+            messageRecipient.innerHTML = '<option value="">اختر المستقبل</option>' + 
+                Array.from(departments).map(dept => 
+                    `<option value="${dept}">${departmentNames[dept] || dept}</option>`
+                ).join('');
+
+            // Update request target dropdown
+            const requestTarget = document.getElementById('requestTargetDepartment');
+            requestTarget.innerHTML = '<option value="">اختر الجهة المختصة</option>' + 
+                Array.from(departments).map(dept => 
+                    `<option value="${dept}">${departmentNames[dept] || dept}</option>`
+                ).join('');
+
+            // Update new user department dropdown
+            const newUserDept = document.getElementById('newUserDepartment');
+            newUserDept.innerHTML = '<option value="">اختر القسم</option>' + 
+                Object.entries(departmentNames).map(([key, name]) => 
+                    `<option value="${key}">${name}</option>`
+                ).join('');
+
+            // Update announcement target dropdown
+            const announcementTarget = document.getElementById('announcementTarget');
+            announcementTarget.innerHTML = '<option value="all">جميع الأقسام</option>' + 
+                Array.from(departments).map(dept => 
+                    `<option value="${dept}">${departmentNames[dept] || dept}</option>`
+                ).join('');
+        }
+
+        // Toggle password visibility
+        function togglePassword() {
+            const passwordField = document.getElementById('password');
+            const passwordIcon = document.getElementById('passwordIcon');
+            
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                passwordIcon.className = 'fas fa-eye-slash';
+            } else {
+                passwordField.type = 'password';
+                passwordIcon.className = 'fas fa-eye';
+            }
+        }
+
+        // Theme toggle
+        function toggleTheme() {
+            const html = document.documentElement;
+            const themeIcon = document.getElementById('themeIcon');
+            
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                themeIcon.className = 'fas fa-moon text-xl';
+                try {
+                    localStorage.setItem('theme', 'light');
+                } catch (e) {}
+            } else {
+                html.classList.add('dark');
+                themeIcon.className = 'fas fa-sun text-xl';
+                try {
+                    localStorage.setItem('theme', 'dark');
+                } catch (e) {}
+            }
+        }
+
+        // Logout function
+        function logout() {
+            if (currentUser) {
+                dataManager.updateUser(currentUser.username, {
+                    isOnline: false,
+                    lastLogout: new Date().toISOString()
+                });
+            }
+
+            currentUser = null;
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+            
+            // Reset form
+            document.getElementById('loginForm').reset();
+            document.getElementById('username').value = 'admin';
+            document.getElementById('password').value = 'admin123';
+            
+            showNotification('تم تسجيل الخروج', 'تم تسجيل الخروج بنجاح', 'info');
+        }
+
+        // Initialize dashboard
+        function initializeDashboard() {
+            updateDashboardStats();
+            loadRecentActivities();
+            loadQuickActions();
+            loadMessages();
+            loadRequests();
+            loadAnnouncements();
+        }
+
+        // Send message function
+        function sendMessage() {
+            const recipient = document.getElementById('messageRecipient').value;
+            const subject = document.getElementById('messageSubject').value;
+            const content = document.getElementById('messageContent').value;
+            const priority = document.getElementById('messagePriority').value;
+
+            if (!recipient || !subject || !content) {
+                showNotification('خطأ', 'يرجى ملء جميع الحقول المطلوبة', 'error');
+                return;
+            }
+
+            try {
+                const messageData = {
+                    fromDepartment: currentUser.department,
+                    fromUser: currentUser.name,
+                    fromUsername: currentUser.username,
+                    recipientDepartment: recipient,
+                    subject: subject,
+                    content: content,
+                    priority: priority
+                };
+
+                dataManager.addMessage(messageData);
+
+                closeModal('composeModal');
+                document.getElementById('composeForm').reset();
+                showNotification('تم الإرسال', 'تم إرسال الرسالة بنجاح', 'success');
+                
+                updateDashboardStats();
+                loadMessages();
+
+            } catch (error) {
+                console.error('خطأ في إرسال الرسالة:', error);
+                showNotification('خطأ', 'حدث خطأ في إرسال الرسالة', 'error');
+            }
+        }
+
+        // Submit request function
+        function submitRequest() {
+            const targetDepartment = document.getElementById('requestTargetDepartment').value;
+            const type = document.getElementById('requestType').value;
+            const title = document.getElementById('requestTitle').value;
+            const details = document.getElementById('requestDetails').value;
+            const priority = document.getElementById('requestPriority').value;
+
+            if (!targetDepartment || !type || !title || !details) {
+                showNotification('خطأ', 'يرجى ملء جميع الحقول المطلوبة', 'error');
+                return;
+            }
+
+            try {
+                const requestData = {
+                    type: type,
+                    title: title,
+                    details: details,
+                    priority: priority,
+                    requester: currentUser.name,
+                    requesterUsername: currentUser.username,
+                    department: currentUser.department,
+                    targetDepartment: targetDepartment
+                };
+
+                dataManager.addRequest(requestData);
+
+                closeModal('newRequestModal');
+                document.getElementById('requestForm').reset();
+                showNotification('تم الإرسال', 'تم إرسال الطلب بنجاح وسيتم مراجعته قريباً', 'success');
+                
+                updateDashboardStats();
+                loadRequests();
+
+            } catch (error) {
+                console.error('خطأ في إرسال الطلب:', error);
+                showNotification('خطأ', 'حدث خطأ في إرسال الطلب', 'error');
+            }
+        }
+
+        // Create announcement function
+        function createAnnouncement() {
+            if (currentUser.department !== 'administration') {
+                showNotification('خطأ', 'ليس لديك صلاحية لإصدار التعميمات', 'error');
+                return;
+            }
+
+            const type = document.getElementById('announcementType').value;
+            const target = document.getElementById('announcementTarget').value;
+            const title = document.getElementById('announcementTitle').value;
+            const content = document.getElementById('announcementContent').value;
+
+            if (!type || !target || !title || !content) {
+                showNotification('خطأ', 'يرجى ملء جميع الحقول المطلوبة', 'error');
+                return;
+            }
+
+            try {
+                const announcementData = {
+                    type: type,
+                    target: target,
+                    title: title,
+                    content: content,
+                    issuer: currentUser.name,
+                    issuerUsername: currentUser.username,
+                    department: currentUser.department
+                };
+
+                dataManager.addAnnouncement(announcementData);
+
+                closeModal('newAnnouncementModal');
+                document.getElementById('announcementForm').reset();
+                showNotification('تم الإصدار', 'تم إصدار التعميم بنجاح وسيتم إبلاغ المعنيين', 'success');
+
+                loadAnnouncements();
+
+            } catch (error) {
+                console.error('خطأ في إصدار التعميم:', error);
+                showNotification('خطأ', 'حدث خطأ في إصدار التعميم', 'error');
+            }
+        }
+
+        // Add user function
+        function addUser() {
+            if (currentUser.department !== 'administration') {
+                showNotification('خطأ', 'ليس لديك صلاحية لإضافة المستخدمين', 'error');
+                return;
+            }
+
+            const name = document.getElementById('newUserName').value;
+            const username = document.getElementById('newUsername').value;
+            const password = document.getElementById('newUserPassword').value;
+            const department = document.getElementById('newUserDepartment').value;
+            const role = document.getElementById('newUserRole').value;
+
+            if (!name || !username || !password || !department || !role) {
+                showNotification('خطأ', 'يرجى ملء جميع الحقول المطلوبة', 'error');
+                return;
+            }
+
+            try {
+                // Check if user already exists
+                if (dataManager.users[username]) {
+                    showNotification('خطأ', 'اسم المستخدم موجود بالفعل', 'error');
+                    return;
+                }
+
+                const userData = {
+                    username: username,
+                    password: password,
+                    name: name,
+                    department: department,
+                    role: role,
+                    createdBy: currentUser.username
+                };
+
+                dataManager.addUser(userData);
+
+                closeModal('addUserModal');
+                document.getElementById('addUserForm').reset();
+                showNotification('تم الإضافة', 'تم إضافة المستخدم بنجاح', 'success');
+
+                loadUsersList();
+                loadDepartmentOptions();
+
+            } catch (error) {
+                console.error('خطأ في إضافة المستخدم:', error);
+                showNotification('خطأ', 'حدث خطأ في إضافة المستخدم', 'error');
+            }
+        }
+
+        // Load users list for admin
+        function loadUsersList() {
+            if (currentUser.department !== 'administration') return;
+
+            const usersList = document.getElementById('usersList');
+            
+            const usersHtml = Object.entries(dataManager.users).map(([username, userData]) => {
+                const isCurrentUser = username === currentUser.username;
+                
+                return `
+                    <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div class="flex-1">
+                            <p class="font-semibold text-gray-800 dark:text-white">${userData.name}</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">${userData.role} - ${getDepartmentName(userData.department)}</p>
+                            <p class="text-xs text-gray-500">@${username}</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-1 text-xs rounded-full ${userData.isActive ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}">
+                                ${userData.isActive ? 'نشط' : 'معطل'}
+                            </span>
+                            ${!isCurrentUser ? `
+                                <button onclick="toggleUserStatus('${username}', ${!userData.isActive})" class="text-sm px-2 py-1 rounded ${userData.isActive ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'} transition-colors">
+                                    ${userData.isActive ? 'تعطيل' : 'تفعيل'}
+                                </button>
+                                <button onclick="deleteUser('${username}')" class="text-red-600 hover:text-red-700 transition-colors">
+                                    <i class="fas fa-trash text-sm"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            usersList.innerHTML = usersHtml || '<p class="text-gray-500 text-center">لا توجد مستخدمين</p>';
+        }
+
+        // Toggle user status
+        function toggleUserStatus(username, newStatus) {
+            try {
+                dataManager.updateUser(username, { isActive: newStatus });
+                loadUsersList();
+                showNotification('تم التحديث', `تم ${newStatus ? 'تفعيل' : 'تعطيل'} المستخدم بنجاح`, 'success');
+            } catch (error) {
+                console.error('خطأ في تحديث حالة المستخدم:', error);
+                showNotification('خطأ', 'حدث خطأ في تحديث حالة المستخدم', 'error');
+            }
+        }
+
+        // Delete user
+        function deleteUser(username) {
+            showConfirmationModal(
+                'حذف المستخدم',
+                `هل أنت متأكد من حذف المستخدم "${dataManager.users[username]?.name || username}"؟`,
+                () => {
+                    try {
+                        dataManager.deleteUser(username);
+                        loadUsersList();
+                        loadDepartmentOptions();
+                        showNotification('تم الحذف', 'تم حذف المستخدم بنجاح', 'success');
+                    } catch (error) {
+                        console.error('خطأ في حذف المستخدم:', error);
+                        showNotification('خطأ', 'حدث خطأ في حذف المستخدم', 'error');
+                    }
+                }
+            );
+        }
+
+        // Approval functions
+        function approveRequest(event, requestId) {
+            event.stopPropagation();
+            
+            try {
+                dataManager.updateRequestStatus(requestId, 'approved', currentUser.name);
+                showNotification('تمت الموافقة', 'تم اعتماد الطلب بنجاح', 'success');
+                updateDashboardStats();
+                loadRequests();
+            } catch (error) {
+                console.error('خطأ في اعتماد الطلب:', error);
+                showNotification('خطأ', 'حدث خطأ في اعتماد الطلب', 'error');
+            }
+        }
+
+        function rejectRequest(event, requestId) {
+            event.stopPropagation();
+            
+            try {
+                dataManager.updateRequestStatus(requestId, 'rejected', currentUser.name);
+                showNotification('تم الرفض', 'تم رفض الطلب', 'warning');
+                updateDashboardStats();
+                loadRequests();
+            } catch (error) {
+                console.error('خطأ في رفض الطلب:', error);
+                showNotification('خطأ', 'حدث خطأ في رفض الطلب', 'error');
+            }
+        }
+
+        // Load functions for different sections
+        function loadMessages() {
+            const messagesList = document.getElementById('messagesList');
+            const sentMessagesList = document.getElementById('sentMessagesList');
+            
+            // Filter messages for current user
+            const userMessages = dataManager.messages.filter(message => 
+                message.recipientDepartment === currentUser.department
+            );
+
+            const sentMessages = dataManager.messages.filter(message => 
+                message.fromUsername === currentUser.username
+            );
+
+            // Load inbox messages
+            if (!userMessages || userMessages.length === 0) {
+                messagesList.innerHTML = '<div class="text-center py-8 text-gray-500">لا توجد رسائل</div>';
+            } else {
+                messagesList.innerHTML = userMessages.map(message => {
+                    const timeAgo = getTimeAgo(new Date(message.timestamp).getTime());
+                    const priorityClass = getPriorityClass(message.priority || 'normal');
+                    const priorityText = getPriorityText(message.priority || 'normal');
+                    const icon = getMessageIcon(message.fromDepartment);
+                    
+                    return `
+                        <div class="message-item flex items-center gap-4 p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${priorityClass}" onclick="openMessage('${message.id}')">
+                            <div class="w-12 h-12 ${icon.bg} rounded-full flex items-center justify-center">
+                                <i class="${icon.class} ${icon.color}"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <h4 class="font-semibold text-gray-800 dark:text-white">${message.subject}</h4>
+                                    <span class="bg-${getPriorityColor(message.priority || 'normal')}-100 dark:bg-${getPriorityColor(message.priority || 'normal')}-900/30 text-${getPriorityColor(message.priority || 'normal')}-600 text-xs px-2 py-1 rounded-full">${priorityText}</span>
+                                    ${!message.read ? '<span class="w-3 h-3 bg-blue-500 rounded-full" title="غير مقروء"></span>' : ''}
+                                </div>
+                                <p class="text-gray-600 dark:text-gray-400 text-sm">من: ${message.fromUser} • ${timeAgo}</p>
+                                <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">${(message.content || '').substring(0, 150)}...</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="replyToMessage(event, '${message.id}')" class="text-gray-400 hover:text-primary cursor-pointer p-2" title="رد">
+                                    <i class="fas fa-reply"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // Load sent messages
+            if (!sentMessages || sentMessages.length === 0) {
+                sentMessagesList.innerHTML = '<div class="text-center py-8 text-gray-500">لا توجد رسائل مرسلة</div>';
+            } else {
+                sentMessagesList.innerHTML = sentMessages.map(message => {
+                    const timeAgo = getTimeAgo(new Date(message.timestamp).getTime());
+                    const priorityText = getPriorityText(message.priority || 'normal');
+                    
+                    return `
+                        <div class="message-item flex items-center gap-4 p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700">
+                            <div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                                <i class="fas fa-paper-plane text-green-600"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <h4 class="font-semibold text-gray-800 dark:text-white">${message.subject}</h4>
+                                    <span class="bg-${getPriorityColor(message.priority || 'normal')}-100 dark:bg-${getPriorityColor(message.priority || 'normal')}-900/30 text-${getPriorityColor(message.priority || 'normal')}-600 text-xs px-2 py-1 rounded-full">${priorityText}</span>
+                                </div>
+                                <p class="text-gray-600 dark:text-gray-400 text-sm">إلى: ${getDepartmentName(message.recipientDepartment)} • ${timeAgo}</p>
+                                <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">${(message.content || '').substring(0, 150)}...</p>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        function loadRequests() {
+            const requestsList = document.getElementById('requestsList');
+            
+            // Filter requests based on user department
+            let userRequests;
+            if (currentUser.department === 'administration') {
+                userRequests = dataManager.requests;
+            } else {
+                userRequests = dataManager.requests.filter(request => 
+                    request.department === currentUser.department || 
+                    request.targetDepartment === currentUser.department
+                );
+            }
+
+            if (!userRequests || userRequests.length === 0) {
+                requestsList.innerHTML = '<div class="text-center py-8 text-gray-500">لا توجد طلبات</div>';
+                return;
+            }
+
+            requestsList.innerHTML = userRequests.map(request => {
+                const timeAgo = getTimeAgo(new Date(request.timestamp).getTime());
+                const statusClass = getStatusClass(request.status);
+                const statusText = getStatusText(request.status);
+                const priorityText = getPriorityText(request.priority || 'normal');
+                const priorityColor = getPriorityColor(request.priority || 'normal');
+                
+                const canApprove = (currentUser.department === 'administration' || 
+                                 currentUser.department === request.targetDepartment) && 
+                                request.status === 'pending';
+                
+                return `
+                    <div class="message-item flex items-start gap-4 p-6 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                            <i class="fas fa-file-alt text-blue-600 text-lg"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <h4 class="font-bold text-gray-800 dark:text-white">${request.title}</h4>
+                                <span class="bg-${priorityColor}-100 dark:bg-${priorityColor}-900/30 text-${priorityColor}-600 text-xs px-2 py-1 rounded-full">${priorityText}</span>
+                                <span class="${statusClass} px-3 py-1 text-xs rounded-full font-medium">${statusText}</span>
+                            </div>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm mb-2">
+                                مقدم من: ${request.requester} (${getDepartmentName(request.department)}) • ${timeAgo}
+                            </p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                                نوع الطلب: ${request.type} | إلى: ${getDepartmentName(request.targetDepartment)}
+                            </p>
+                            <p class="text-gray-700 dark:text-gray-300 mb-4">${request.details}</p>
+                            ${canApprove ? `
+                                <div class="flex gap-3">
+                                    <button onclick="approveRequest(event, '${request.id}')" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2">
+                                        <i class="fas fa-check"></i>
+                                        موافقة
+                                    </button>
+                                    <button onclick="rejectRequest(event, '${request.id}')" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2">
+                                        <i class="fas fa-times"></i>
+                                        رفض
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function loadAnnouncements() {
+            const announcementsList = document.getElementById('announcementsList');
+            
+            // Filter announcements based on target
+            let userAnnouncements;
+            if (currentUser.department === 'administration') {
+                userAnnouncements = dataManager.announcements;
+            } else {
+                userAnnouncements = dataManager.announcements.filter(announcement => 
+                    announcement.target === 'all' || announcement.target === currentUser.department
+                );
+            }
+
+            if (!userAnnouncements || userAnnouncements.length === 0) {
+                announcementsList.innerHTML = '<div class="text-center py-8 text-gray-500">لا توجد تعميمات</div>';
+                return;
+            }
+
+            announcementsList.innerHTML = userAnnouncements.map(announcement => {
+                const timeAgo = getTimeAgo(new Date(announcement.timestamp).getTime());
+                const issuedByCurrentUser = announcement.issuerUsername === currentUser.username;
+                
+                return `
+                    <div class="message-item flex items-start gap-4 p-6 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                            <i class="fas fa-bullhorn text-green-600 text-lg"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <h4 class="font-bold text-gray-800 dark:text-white text-lg">${announcement.title}</h4>
+                                <span class="bg-green-100 dark:bg-green-900/30 text-green-600 text-xs px-2 py-1 rounded-full">${getAnnouncementTypeText(announcement.type)}</span>
+                            </div>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm mb-2">
+                                أصدره: ${announcement.issuer} • ${timeAgo}
+                                ${announcement.target !== 'all' ? ` • موجه لـ: ${getDepartmentName(announcement.target)}` : ' • لجميع الأقسام'}
+                            </p>
+                            <p class="text-gray-700 dark:text-gray-300">${announcement.content}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function loadQuickActions() {
+            const quickActions = document.getElementById('quickActions');
+            const isAdmin = currentUser.department === 'administration';
+
+            const actions = [
+                {
+                    title: 'الإجراءات السريعة',
+                    items: [
+                        { action: "showSection('messages'); openComposeModal()", icon: 'fas fa-plus', label: 'رسالة جديدة', color: 'from-primary to-secondary' },
+                        { action: "showSection('requests'); openNewRequestModal()", icon: 'fas fa-file-plus', label: 'طلب جديد', color: 'from-blue-500 to-blue-600' },
+                        ...(isAdmin ? [{ action: "showSection('announcements'); openNewAnnouncementModal()", icon: 'fas fa-bullhorn', label: 'تعميم جديد', color: 'from-green-500 to-emerald-500' }] : []),
+                        { action: "exportData()", icon: 'fas fa-download', label: 'تصدير التقارير', color: 'from-purple-500 to-purple-600' }
+                    ]
+                },
+                {
+                    title: 'إحصائيات النظام',
+                    items: [
+                        { label: 'المتصلون الآن', value: '1', id: 'onlineUsers' },
+                        { label: 'إجمالي المستخدمين', value: Object.keys(dataManager.users).length, id: 'totalUsers' },
+                        { label: 'رسائل اليوم', value: getTodayCount(dataManager.messages), id: 'todayMessages' },
+                        { label: 'طلبات معلقة', value: dataManager.requests.filter(r => r.status === 'pending').length, id: 'pendingTotal' }
+                    ]
+                },
+                {
+                    title: 'الوصول السريع',
+                    items: [
+                        { action: "showSection('messages')", icon: 'fas fa-envelope', label: 'الرسائل', color: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20' },
+                        { action: "showSection('requests')", icon: 'fas fa-file-alt', label: 'الطلبات', color: 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20' },
+                        { action: "showSection('announcements')", icon: 'fas fa-bullhorn', label: 'التعميمات', color: 'text-green-600 bg-green-50 dark:bg-green-900/20' },
+                        ...(isAdmin ? [{ action: "showSection('settings')", icon: 'fas fa-cog', label: 'الإعدادات', color: 'text-purple-600 bg-purple-50 dark:bg-purple-900/20' }] : [])
+                    ]
+                }
+            ];
+
+            quickActions.innerHTML = actions.map(section => `
+                <div class="glass-card p-6 rounded-2xl shadow-xl">
+                    <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-4">${section.title}</h3>
+                    ${section.items[0].action ? `
+                        <div class="space-y-3">
+                            ${section.items.map(item => `
+                                <button onclick="${item.action}" class="w-full flex items-center gap-3 p-3 text-right bg-gradient-to-r ${item.color} text-white rounded-xl hover:shadow-lg transition-all transform hover:scale-105">
+                                    <i class="${item.icon} text-lg"></i>
+                                    <span class="font-medium">${item.label}</span>
+                                </button>
+                            `).join('')}
+                        </div>
+                    ` : section.items[0].value !== undefined ? `
+                        <div class="space-y-3">
+                            ${section.items.map(item => `
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600 dark:text-gray-400">${item.label}</span>
+                                    <span class="font-bold text-gray-600 dark:text-gray-400" id="${item.id}">${item.value}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : `
+                        <div class="grid grid-cols-2 gap-3">
+                            ${section.items.map(item => `
+                                <button onclick="${item.action}" class="p-3 ${item.color} rounded-lg hover:opacity-80 transition-colors">
+                                    <i class="${item.icon} text-lg mb-1"></i>
+                                    <p class="text-xs">${item.label}</p>
+                                </button>
+                            `).join('')}
+                        </div>
+                    `}
+                </div>
+            `).join('');
+        }
+
+        function updateDashboardStats() {
+            // Filter messages and requests based on user department
+            const userMessages = dataManager.messages.filter(m => 
+                m.recipientDepartment === currentUser.department
+            );
+            const newMessages = userMessages.filter(m => !m.read);
+            const pendingReqs = dataManager.requests.filter(r => 
+                r.status === 'pending' && (
+                    currentUser.department === 'administration' || 
+                    r.targetDepartment === currentUser.department ||
+                    r.department === currentUser.department
+                )
+            );
+            const approvedToday = dataManager.requests.filter(r => 
+                r.status === 'approved' && 
+                isToday(new Date(r.timestamp))
+            );
+            const urgentAlerts = [...newMessages, ...pendingReqs].filter(item => 
+                item.priority === 'urgent'
+            );
+
+            // Update stats cards
+            const statsContainer = document.getElementById('dashboardStats');
+            statsContainer.innerHTML = `
+                <div class="glass-card p-6 rounded-2xl shadow-xl card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 dark:text-gray-400 font-medium">الرسائل الجديدة</p>
+                            <p class="text-3xl font-black text-gray-800 dark:text-white">${newMessages.length}</p>
+                            <p class="text-sm text-blue-600">رسائل غير مقروءة</p>
+                        </div>
+                        <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                            <i class="fas fa-envelope text-white text-2xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card p-6 rounded-2xl shadow-xl card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 dark:text-gray-400 font-medium">الطلبات المعلقة</p>
+                            <p class="text-3xl font-black text-gray-800 dark:text-white">${pendingReqs.length}</p>
+                            <p class="text-sm text-yellow-600">تحتاج مراجعة</p>
+                        </div>
+                        <div class="w-16 h-16 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg">
+                            <i class="fas fa-clock text-white text-2xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card p-6 rounded-2xl shadow-xl card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 dark:text-gray-400 font-medium">طلبات معتمدة اليوم</p>
+                            <p class="text-3xl font-black text-gray-800 dark:text-white">${approvedToday.length}</p>
+                            <p class="text-sm text-green-600">معدل إنجاز ممتاز</p>
+                        </div>
+                        <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg">
+                            <i class="fas fa-check-circle text-white text-2xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card p-6 rounded-2xl shadow-xl card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 dark:text-gray-400 font-medium">التنبيهات العاجلة</p>
+                            <p class="text-3xl font-black text-gray-800 dark:text-white">${urgentAlerts.length}</p>
+                            <p class="text-sm text-red-600">تحتاج اهتمام فوري</p>
+                        </div>
+                        <div class="w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl flex items-center justify-center shadow-lg">
+                            <i class="fas fa-exclamation-triangle text-white text-2xl ${urgentAlerts.length > 0 ? 'pulse-notification' : ''}"></i>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Update navigation counters
+            const elements = {
+                unreadMessages: newMessages.length,
+                pendingRequests: pendingReqs.length,
+                notificationCount: urgentAlerts.length
+            };
+
+            Object.entries(elements).forEach(([id, count]) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.textContent = count;
+                    if (count > 0) {
+                        element.classList.remove('hidden');
+                    } else {
+                        element.classList.add('hidden');
+                    }
+                }
+            });
+
+            // Update request stats
+            const pending = dataManager.requests.filter(r => r.status === 'pending').length;
+            const approved = dataManager.requests.filter(r => r.status === 'approved').length;
+            const rejected = dataManager.requests.filter(r => r.status === 'rejected').length;
+
+            ['pendingCount', 'approvedCount', 'rejectedCount', 'totalRequests'].forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    const value = id === 'pendingCount' ? pending :
+                                 id === 'approvedCount' ? approved :
+                                 id === 'rejectedCount' ? rejected : dataManager.requests.length;
+                    element.textContent = value;
+                }
+            });
+
+            // Update message counts
+            ['inboxCount', 'sentCount'].forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    if (id === 'inboxCount') {
+                        element.textContent = userMessages.length;
+                    } else if (id === 'sentCount') {
+                        const sentMessages = dataManager.messages.filter(m => m.fromUsername === currentUser.username);
+                        element.textContent = sentMessages.length;
+                    }
+                }
+            });
+        }
+
+        function loadRecentActivities() {
+            const activitiesContainer = document.getElementById('recentActivities');
+            
+            // Filter recent messages for user
+            const userMessages = dataManager.messages.filter(m => 
+                m.recipientDepartment === currentUser.department
+            ).slice(0, 3);
+
+            // Filter recent requests for user
+            const userRequests = dataManager.requests.filter(r => 
+                currentUser.department === 'administration' || 
+                r.targetDepartment === currentUser.department ||
+                r.department === currentUser.department
+            ).slice(0, 3);
+
+            // Filter recent announcements for user
+            const userAnnouncements = dataManager.announcements.filter(a => 
+                a.target === 'all' || a.target === currentUser.department ||
+                currentUser.department === 'administration'
+            ).slice(0, 2);
+
+            const allActivities = [
+                ...userMessages.map(m => ({...m, activityType: 'message'})),
+                ...userRequests.map(r => ({...r, activityType: 'request'})),
+                ...userAnnouncements.map(a => ({...a, activityType: 'announcement'}))
+            ].sort((a, b) => {
+                const aTime = new Date(a.timestamp).getTime();
+                const bTime = new Date(b.timestamp).getTime();
+                return bTime - aTime;
+            }).slice(0, 5);
+
+            if (allActivities.length === 0) {
+                activitiesContainer.innerHTML = '<div class="text-center py-8 text-gray-500">لا توجد نشاطات حديثة</div>';
+                return;
+            }
+
+            activitiesContainer.innerHTML = allActivities.map(activity => {
+                const timeAgo = getTimeAgo(new Date(activity.timestamp).getTime());
+                const icon = getActivityIcon(activity);
+                const priorityClass = getPriorityClass(activity.priority || 'normal');
+                
+                return `
+                    <div class="message-item flex items-center gap-4 p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${priorityClass}">
+                        <div class="w-12 h-12 ${icon.bg} rounded-full flex items-center justify-center">
+                            <i class="${icon.class} ${icon.color}"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <h4 class="font-semibold text-gray-800 dark:text-white">${activity.subject || activity.title}</h4>
+                                ${activity.priority === 'urgent' ? '<span class="bg-red-100 dark:bg-red-900/30 text-red-600 text-xs px-2 py-1 rounded-full">عاجل جداً</span>' : ''}
+                                ${!activity.read && activity.activityType === 'message' ? '<span class="w-3 h-3 bg-blue-500 rounded-full" title="غير مقروء"></span>' : ''}
+                            </div>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm">${activity.fromUser || activity.requester || activity.issuer} • ${timeAgo}</p>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">${(activity.content || activity.details || '').substring(0, 100)}...</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Navigation and modal functions
+        function showSection(sectionName) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.add('hidden');
+            });
+
+            // Remove active class from all nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active', 'text-primary', 'bg-primary/10');
+                item.classList.add('text-gray-700', 'dark:text-gray-300');
+            });
+
+            // Show selected section with animation
+            const targetSection = document.getElementById(sectionName + '-section');
+            if (targetSection) {
+                targetSection.classList.remove('hidden');
+                targetSection.classList.add('fade-in');
+            }
+
+            // Add active class to selected nav item
+            const activeItem = document.querySelector(`[onclick="showSection('${sectionName}')"]`);
+            if (activeItem) {
+                activeItem.classList.add('active', 'text-primary', 'bg-primary/10');
+                activeItem.classList.remove('text-gray-700', 'dark:text-gray-300');
+            }
+
+            currentSection = sectionName;
+
+            // Load section-specific data
+            if (sectionName === 'settings') {
+                loadUsersList();
+            }
+
+            // Close sidebar on mobile
+            if (window.innerWidth < 1024) {
+                document.getElementById('sidebar').classList.add('translate-x-full');
+            }
+        }
+
+        // Message tab switching
+        function switchMessageTab(tabName) {
+            // Remove active class from all tabs
+            document.querySelectorAll('.message-tab').forEach(tab => {
+                tab.classList.remove('active', 'text-primary', 'border-primary', 'border-b-2');
+                tab.classList.add('text-gray-600', 'dark:text-gray-400');
+            });
+            
+            // Add active class to clicked tab
+            const activeTab = document.querySelector(`[data-tab="${tabName}"]`);
+            if (activeTab) {
+                activeTab.classList.add('active', 'text-primary', 'border-primary', 'border-b-2');
+                activeTab.classList.remove('text-gray-600', 'dark:text-gray-400');
+            }
+            
+            // Show corresponding content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            const targetContent = document.getElementById(tabName + '-tab');
+            if (targetContent) {
+                targetContent.classList.remove('hidden');
+            }
+        }
+
+        // Modal functions
+        function openComposeModal() {
+            document.getElementById('composeModal').classList.remove('hidden');
+            document.getElementById('messageSubject').focus();
+        }
+
+        function openNewRequestModal() {
+            document.getElementById('newRequestModal').classList.remove('hidden');
+            document.getElementById('requestTargetDepartment').focus();
+        }
+
+        function openNewAnnouncementModal() {
+            if (currentUser.department !== 'administration') {
+                showNotification('خطأ', 'ليس لديك صلاحية لإصدار التعميمات', 'error');
+                return;
+            }
+            document.getElementById('newAnnouncementModal').classList.remove('hidden');
+            document.getElementById('announcementType').focus();
+        }
+
+        function openAddUserModal() {
+            if (currentUser.department !== 'administration') {
+                showNotification('خطأ', 'ليس لديك صلاحية لإضافة المستخدمين', 'error');
+                return;
+            }
+            document.getElementById('addUserModal').classList.remove('hidden');
+            document.getElementById('newUserName').focus();
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        function closeAllModals() {
+            document.querySelectorAll('.modal-backdrop').forEach(modal => {
+                modal.classList.add('hidden');
+            });
+        }
+
+        // Confirmation modal
+        function showConfirmationModal(title, message, onConfirm) {
+            document.getElementById('confirmationTitle').textContent = title;
+            document.getElementById('confirmationMessage').textContent = message;
+            pendingConfirmation = onConfirm;
+            document.getElementById('confirmationModal').classList.remove('hidden');
+        }
+
+        function confirmAction() {
+            if (pendingConfirmation) {
+                pendingConfirmation();
+                pendingConfirmation = null;
+            }
+            closeModal('confirmationModal');
+        }
+
+        // Message and request interaction functions
+        function openMessage(messageId) {
+            const message = dataManager.messages.find(m => m.id === messageId);
+            if (message && !message.read) {
+                dataManager.markMessageAsRead(messageId);
+                updateDashboardStats();
+                loadMessages();
+            }
+            
+            if (message) {
+                showNotification('تفاصيل الرسالة', `${message.subject} - ${message.content}`, 'info');
+            }
+        }
+
+        function replyToMessage(event, messageId) {
+            event.stopPropagation();
+            
+            const message = dataManager.messages.find(m => m.id === messageId);
+            if (message) {
+                openComposeModal();
+                document.getElementById('messageRecipient').value = message.fromDepartment;
+                document.getElementById('messageSubject').value = 'رد: ' + message.subject;
+                document.getElementById('messageContent').value = '\n\n--- الرسالة الأصلية ---\n' + message.content;
+            }
+        }
+
+        // Export and utility functions
+        function exportData() {
+            try {
+                const data = {
+                    users: dataManager.users,
+                    messages: dataManager.messages,
+                    requests: dataManager.requests,
+                    announcements: dataManager.announcements,
+                    exportedAt: new Date().toISOString(),
+                    exportedBy: currentUser.username
+                };
+
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `نظام_المراسلات_${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                showNotification('تم التصدير', 'تم تصدير البيانات بنجاح', 'success');
+            } catch (error) {
+                showNotification('خطأ', 'حدث خطأ في تصدير البيانات', 'error');
+            }
+        }
+
+        function clearAllData() {
+            showConfirmationModal(
+                'مسح جميع البيانات',
+                'هل أنت متأكد من مسح جميع البيانات؟ لا يمكن التراجع عن هذا الإجراء!',
+                () => {
+                    try {
+                        localStorage.removeItem('system_messages');
+                        localStorage.removeItem('system_requests');
+                        localStorage.removeItem('system_announcements');
+                        
+                        // Reset data but keep admin user
+                        dataManager.messages = [];
+                        dataManager.requests = [];
+                        dataManager.announcements = [];
+                        
+                        // Keep only admin user
+                        const adminUser = dataManager.users.admin;
+                        dataManager.users = { admin: adminUser };
+                        dataManager.saveUsers();
+
+                        // Reload interface
+                        updateDashboardStats();
+                        loadMessages();
+                        loadRequests();
+                        loadAnnouncements();
+                        loadUsersList();
+                        loadDepartmentOptions();
+
+                        showNotification('تم المسح', 'تم مسح جميع البيانات بنجاح', 'success');
+                    } catch (error) {
+                        showNotification('خطأ', 'حدث خطأ في مسح البيانات', 'error');
+                    }
+                }
+            );
+        }
+
+        // Utility functions
+        function getTimeAgo(timestamp) {
+            const now = Date.now();
+            const diff = now - timestamp;
+            
+            if (diff < 60000) return 'الآن';
+            if (diff < 3600000) return Math.floor(diff / 60000) + ' دقيقة';
+            if (diff < 86400000) return Math.floor(diff / 3600000) + ' ساعة';
+            if (diff < 604800000) return Math.floor(diff / 86400000) + ' يوم';
+            
+            return new Date(timestamp).toLocaleDateString('ar');
+        }
+
+        function isToday(date) {
+            const today = new Date();
+            return date.toDateString() === today.toDateString();
+        }
+
+        function getTodayCount(items) {
+            return items.filter(item => isToday(new Date(item.timestamp))).length;
+        }
+
+        function getDepartmentName(department) {
+            const departments = {
+                'administration': 'الإدارة العليا',
+                'student_affairs': 'شؤون الطلاب',
+                'employee_affairs': 'شؤون الموظفين',
+                'accounting': 'المحاسبة',
+                'transport': 'النقل المدرسي',
+                'coordinators': 'المنسقين',
+                'department_heads': 'رؤساء الأقسام',
+                'it': 'تقنية المعلومات'
+            };
+            return departments[department] || department;
+        }
+
+        function getMessageIcon(department) {
+            const icons = {
+                'student_affairs': { class: 'fas fa-user-graduate', color: 'text-blue-600', bg: 'bg-blue-100 dark:bg-blue-900/30' },
+                'accounting': { class: 'fas fa-calculator', color: 'text-green-600', bg: 'bg-green-100 dark:bg-green-900/30' },
+                'transport': { class: 'fas fa-bus', color: 'text-yellow-600', bg: 'bg-yellow-100 dark:bg-yellow-900/30' },
+                'administration': { class: 'fas fa-user-tie', color: 'text-purple-600', bg: 'bg-purple-100 dark:bg-purple-900/30' },
+                'employee_affairs': { class: 'fas fa-users', color: 'text-indigo-600', bg: 'bg-indigo-100 dark:bg-indigo-900/30' },
+                'coordinators': { class: 'fas fa-users-cog', color: 'text-orange-600', bg: 'bg-orange-100 dark:bg-orange-900/30' },
+                'department_heads': { class: 'fas fa-user-crown', color: 'text-red-600', bg: 'bg-red-100 dark:bg-red-900/30' },
+                'it': { class: 'fas fa-laptop', color: 'text-cyan-600', bg: 'bg-cyan-100 dark:bg-cyan-900/30' }
+            };
+            return icons[department] || { class: 'fas fa-envelope', color: 'text-gray-600', bg: 'bg-gray-100 dark:bg-gray-900/30' };
+        }
+
+        function getActivityIcon(activity) {
+            if (activity.activityType === 'message') {
+                return getMessageIcon(activity.fromDepartment);
+            } else if (activity.activityType === 'request') {
+                return { class: 'fas fa-file-alt', color: 'text-blue-600', bg: 'bg-blue-100 dark:bg-blue-900/30' };
+            } else if (activity.activityType === 'announcement') {
+                return { class: 'fas fa-bullhorn', color: 'text-green-600', bg: 'bg-green-100 dark:bg-green-900/30' };
+            }
+            return { class: 'fas fa-circle', color: 'text-gray-600', bg: 'bg-gray-100 dark:bg-gray-900/30' };
+        }
+
+        function getAnnouncementTypeText(type) {
+            const types = {
+                'general': 'تعميم عام',
+                'policy': 'سياسة',
+                'instruction': 'تعليمات',
+                'announcement': 'إعلان'
+            };
+            return types[type] || type;
+        }
+
+        function getPriorityClass(priority) {
+            const classes = {
+                'urgent': 'priority-urgent',
+                'high': 'priority-high',
+                'normal': 'priority-normal'
+            };
+            return classes[priority] || 'priority-normal';
+        }
+
+        function getPriorityText(priority) {
+            const texts = {
+                'urgent': 'عاجل جداً',
+                'high': 'عاجل',
+                'normal': 'عادي'
+            };
+            return texts[priority] || 'عادي';
+        }
+
+        function getPriorityColor(priority) {
+            const colors = {
+                'urgent': 'red',
+                'high': 'yellow',
+                'normal': 'green'
+            };
+            return colors[priority] || 'green';
+        }
+
+        function getStatusClass(status) {
+            const classes = {
+                'pending': 'status-pending',
+                'approved': 'status-approved',
+                'rejected': 'status-rejected'
+            };
+            return classes[status] || 'status-pending';
+        }
+
+        function getStatusText(status) {
+            const texts = {
+                'pending': 'قيد المراجعة',
+                'approved': 'معتمدة',
+                'rejected': 'مرفوضة'
+            };
+            return texts[status] || status;
+        }
+
+        // Notification function
+        function showNotification(title, message, type = 'info') {
+            const notification = document.getElementById('notification');
+            const titleElement = document.getElementById('notificationTitle');
+            const messageElement = document.getElementById('notificationMessage');
+            const iconElement = document.getElementById('notificationIcon');
+
+            const colors = {
+                success: { bg: 'bg-green-500', icon: 'fas fa-check' },
+                error: { bg: 'bg-red-500', icon: 'fas fa-times' },
+                warning: { bg: 'bg-yellow-500', icon: 'fas fa-exclamation-triangle' },
+                info: { bg: 'bg-blue-500', icon: 'fas fa-info' }
+            };
+
+            const config = colors[type] || colors.info;
+            
+            titleElement.textContent = title;
+            messageElement.textContent = message;
+            iconElement.className = `w-10 h-10 ${config.bg} rounded-full flex items-center justify-center`;
+            iconElement.innerHTML = `<i class="${config.icon} text-white"></i>`;
+
+            notification.classList.remove('hidden');
+            notification.classList.add('slide-in-right');
+
+            setTimeout(() => {
+                notification.classList.add('hidden');
+                notification.classList.remove('slide-in-right');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
