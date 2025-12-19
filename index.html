@@ -157,6 +157,16 @@
             background: rgba(239, 68, 68, 0.1);
         }
         
+        .status-admin-approved {
+            color: #7C3AED;
+            background: rgba(124, 58, 237, 0.1);
+        }
+        
+        .status-archived {
+            color: #6B7280;
+            background: rgba(107, 114, 128, 0.1);
+        }
+        
         .gradient-bg {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #5D5CDE 100%);
         }
@@ -233,6 +243,22 @@
             backdrop-filter: blur(5px);
             background: rgba(0, 0, 0, 0.6);
         }
+
+        .request-actions {
+            border-top: 1px solid rgba(229, 231, 235, 0.5);
+            padding-top: 1rem;
+            margin-top: 1rem;
+        }
+
+        .archived-item {
+            opacity: 0.7;
+            filter: grayscale(30%);
+        }
+
+        .archived-item:hover {
+            opacity: 1;
+            filter: grayscale(0%);
+        }
     </style>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
@@ -271,7 +297,11 @@
                 this.messages = [];
                 this.requests = [];
                 this.announcements = [];
+                this.archivedMessages = [];
+                this.archivedRequests = [];
+                this.archivedAnnouncements = [];
                 this.isOnline = false;
+                this.maxLoadLimit = 500; // زيادة حد التحميل
                 this.checkConnection();
             }
 
@@ -324,7 +354,8 @@
                         this.loadUsers(),
                         this.loadMessages(),
                         this.loadRequests(),
-                        this.loadAnnouncements()
+                        this.loadAnnouncements(),
+                        this.loadArchivedData()
                     ]);
                     console.log('✅ تم تحميل جميع البيانات من Firebase');
                 } catch (error) {
@@ -349,8 +380,9 @@
             async loadMessages() {
                 try {
                     const snapshot = await db.collection('messages')
+                        .where('archived', '==', false)
                         .orderBy('timestamp', 'desc')
-                        .limit(100)
+                        .limit(this.maxLoadLimit)
                         .get();
                     
                     this.messages = snapshot.docs.map(doc => ({
@@ -367,8 +399,9 @@
             async loadRequests() {
                 try {
                     const snapshot = await db.collection('requests')
+                        .where('archived', '==', false)
                         .orderBy('timestamp', 'desc')
-                        .limit(100)
+                        .limit(this.maxLoadLimit)
                         .get();
                     
                     this.requests = snapshot.docs.map(doc => ({
@@ -385,8 +418,9 @@
             async loadAnnouncements() {
                 try {
                     const snapshot = await db.collection('announcements')
+                        .where('archived', '==', false)
                         .orderBy('timestamp', 'desc')
-                        .limit(50)
+                        .limit(this.maxLoadLimit)
                         .get();
                     
                     this.announcements = snapshot.docs.map(doc => ({
@@ -396,6 +430,37 @@
                 } catch (error) {
                     console.error('خطأ في تحميل التعميمات:', error);
                     this.announcements = [];
+                }
+            }
+
+            // تحميل البيانات المؤرشفة
+            async loadArchivedData() {
+                try {
+                    const [messagesSnapshot, requestsSnapshot, announcementsSnapshot] = await Promise.all([
+                        db.collection('messages').where('archived', '==', true).orderBy('archivedAt', 'desc').limit(200).get(),
+                        db.collection('requests').where('archived', '==', true).orderBy('archivedAt', 'desc').limit(200).get(),
+                        db.collection('announcements').where('archived', '==', true).orderBy('archivedAt', 'desc').limit(200).get()
+                    ]);
+                    
+                    this.archivedMessages = messagesSnapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                    
+                    this.archivedRequests = requestsSnapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                    
+                    this.archivedAnnouncements = announcementsSnapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                } catch (error) {
+                    console.error('خطأ في تحميل البيانات المؤرشفة:', error);
+                    this.archivedMessages = [];
+                    this.archivedRequests = [];
+                    this.archivedAnnouncements = [];
                 }
             }
 
@@ -437,13 +502,19 @@
                 }
             }
 
-            // حذف مستخدم
+            // حذف مستخدم فوري
             async deleteUser(username) {
                 try {
                     if (username === 'admin') return false;
                     
                     await db.collection('users').doc(username).delete();
                     delete this.users[username];
+                    
+                    // تحديث فوري للواجهة
+                    if (window.loadUsersList && typeof window.loadUsersList === 'function') {
+                        window.loadUsersList();
+                    }
+                    
                     return true;
                 } catch (error) {
                     console.error('خطأ في حذف المستخدم:', error);
@@ -457,16 +528,45 @@
                     const message = {
                         ...messageData,
                         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                        read: false
+                        read: false,
+                        archived: false
                     };
                     
                     const docRef = await db.collection('messages').add(message);
-                    const newMessage = { id: docRef.id, ...messageData, timestamp: new Date() };
+                    const newMessage = { 
+                        id: docRef.id, 
+                        ...messageData, 
+                        timestamp: new Date(), 
+                        read: false, 
+                        archived: false 
+                    };
                     this.messages.unshift(newMessage);
                     return newMessage;
                 } catch (error) {
                     console.error('خطأ في إضافة الرسالة:', error);
                     return null;
+                }
+            }
+
+            // أرشفة رسالة
+            async archiveMessage(messageId) {
+                try {
+                    await db.collection('messages').doc(messageId).update({
+                        archived: true,
+                        archivedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    const messageIndex = this.messages.findIndex(m => m.id === messageId);
+                    if (messageIndex !== -1) {
+                        const archivedMessage = { ...this.messages[messageIndex], archived: true, archivedAt: new Date() };
+                        this.messages.splice(messageIndex, 1);
+                        this.archivedMessages.unshift(archivedMessage);
+                    }
+                    
+                    return true;
+                } catch (error) {
+                    console.error('خطأ في أرشفة الرسالة:', error);
+                    return false;
                 }
             }
 
@@ -476,11 +576,24 @@
                     const request = {
                         ...requestData,
                         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                        status: 'pending'
+                        status: 'pending',
+                        adminApproved: false,
+                        departmentReplied: false,
+                        replies: [],
+                        archived: false
                     };
                     
                     const docRef = await db.collection('requests').add(request);
-                    const newRequest = { id: docRef.id, ...requestData, timestamp: new Date(), status: 'pending' };
+                    const newRequest = { 
+                        id: docRef.id, 
+                        ...requestData, 
+                        timestamp: new Date(), 
+                        status: 'pending',
+                        adminApproved: false,
+                        departmentReplied: false,
+                        replies: [],
+                        archived: false
+                    };
                     this.requests.unshift(newRequest);
                     return newRequest;
                 } catch (error) {
@@ -489,16 +602,143 @@
                 }
             }
 
+            // أرشفة طلب
+            async archiveRequest(requestId) {
+                try {
+                    await db.collection('requests').doc(requestId).update({
+                        archived: true,
+                        archivedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    const requestIndex = this.requests.findIndex(r => r.id === requestId);
+                    if (requestIndex !== -1) {
+                        const archivedRequest = { ...this.requests[requestIndex], archived: true, archivedAt: new Date() };
+                        this.requests.splice(requestIndex, 1);
+                        this.archivedRequests.unshift(archivedRequest);
+                    }
+                    
+                    return true;
+                } catch (error) {
+                    console.error('خطأ في أرشفة الطلب:', error);
+                    return false;
+                }
+            }
+
+            // إضافة رد على طلب
+            async addRequestReply(requestId, replyData) {
+                try {
+                    const request = this.requests.find(r => r.id === requestId);
+                    if (!request) return false;
+
+                    const reply = {
+                        ...replyData,
+                        timestamp: new Date(),
+                        id: Date.now().toString()
+                    };
+
+                    request.replies = request.replies || [];
+                    request.replies.push(reply);
+                    request.departmentReplied = true;
+                    request.status = 'replied';
+
+                    await db.collection('requests').doc(requestId).update({
+                        replies: firebase.firestore.FieldValue.arrayUnion(reply),
+                        departmentReplied: true,
+                        status: 'replied',
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+
+                    this.notifyAdministration('reply_added', {
+                        requestId: requestId,
+                        replyFrom: replyData.fromUser,
+                        requestTitle: request.title
+                    });
+
+                    return true;
+                } catch (error) {
+                    console.error('خطأ في إضافة الرد:', error);
+                    return false;
+                }
+            }
+
+            // تحديث طلب
+            async updateRequest(requestId, updates) {
+                try {
+                    await db.collection('requests').doc(requestId).update({
+                        ...updates,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    const request = this.requests.find(r => r.id === requestId);
+                    if (request) {
+                        Object.assign(request, updates);
+                        
+                        // تحديث فوري للواجهة
+                        if (window.loadRequests && typeof window.loadRequests === 'function') {
+                            window.loadRequests();
+                        }
+                    }
+
+                    this.notifyAdministration('request_updated', {
+                        requestId: requestId,
+                        updatedBy: updates.updatedBy,
+                        action: 'تحديث'
+                    });
+
+                    return true;
+                } catch (error) {
+                    console.error('خطأ في تحديث الطلب:', error);
+                    return false;
+                }
+            }
+
+            // حذف طلب فوري
+            async deleteRequest(requestId) {
+                try {
+                    await db.collection('requests').doc(requestId).delete();
+                    
+                    const requestIndex = this.requests.findIndex(r => r.id === requestId);
+                    if (requestIndex !== -1) {
+                        const deletedRequest = this.requests[requestIndex];
+                        this.requests.splice(requestIndex, 1);
+
+                        // تحديث فوري للواجهة
+                        if (window.loadRequests && typeof window.loadRequests === 'function') {
+                            window.loadRequests();
+                        }
+                        if (window.updateDashboardStats && typeof window.updateDashboardStats === 'function') {
+                            window.updateDashboardStats();
+                        }
+
+                        this.notifyAdministration('request_deleted', {
+                            requestTitle: deletedRequest.title,
+                            deletedBy: window.currentUser?.name
+                        });
+                    }
+
+                    return true;
+                } catch (error) {
+                    console.error('خطأ في حذف الطلب:', error);
+                    return false;
+                }
+            }
+
             // إضافة تعميم
             async addAnnouncement(announcementData) {
                 try {
                     const announcement = {
                         ...announcementData,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        archived: false
                     };
                     
                     const docRef = await db.collection('announcements').add(announcement);
-                    const newAnnouncement = { id: docRef.id, ...announcementData, timestamp: new Date() };
+                    const newAnnouncement = { 
+                        id: docRef.id, 
+                        ...announcementData, 
+                        timestamp: new Date(), 
+                        archived: false 
+                    };
                     this.announcements.unshift(newAnnouncement);
                     return newAnnouncement;
                 } catch (error) {
@@ -507,21 +747,71 @@
                 }
             }
 
+            // أرشفة تعميم
+            async archiveAnnouncement(announcementId) {
+                try {
+                    await db.collection('announcements').doc(announcementId).update({
+                        archived: true,
+                        archivedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    const announcementIndex = this.announcements.findIndex(a => a.id === announcementId);
+                    if (announcementIndex !== -1) {
+                        const archivedAnnouncement = { 
+                            ...this.announcements[announcementIndex], 
+                            archived: true, 
+                            archivedAt: new Date() 
+                        };
+                        this.announcements.splice(announcementIndex, 1);
+                        this.archivedAnnouncements.unshift(archivedAnnouncement);
+                    }
+                    
+                    return true;
+                } catch (error) {
+                    console.error('خطأ في أرشفة التعميم:', error);
+                    return false;
+                }
+            }
+
             // تحديث حالة طلب
             async updateRequestStatus(requestId, status, updatedBy) {
                 try {
-                    await db.collection('requests').doc(requestId).update({
+                    const updates = {
                         status: status,
                         updatedBy: updatedBy,
                         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
+                    };
+
+                    if (status === 'admin-approved') {
+                        updates.adminApproved = true;
+                        updates.adminApprovedAt = firebase.firestore.FieldValue.serverTimestamp();
+                        updates.adminApprovedBy = updatedBy;
+                    }
+
+                    await db.collection('requests').doc(requestId).update(updates);
                     
                     const request = this.requests.find(r => r.id === requestId);
                     if (request) {
-                        request.status = status;
-                        request.updatedBy = updatedBy;
-                        request.updatedAt = new Date();
+                        Object.assign(request, {
+                            status: status,
+                            updatedBy: updatedBy,
+                            updatedAt: new Date(),
+                            ...(status === 'admin-approved' && {
+                                adminApproved: true,
+                                adminApprovedAt: new Date(),
+                                adminApprovedBy: updatedBy
+                            })
+                        });
+                        
+                        // تحديث فوري للواجهة
+                        if (window.loadRequests && typeof window.loadRequests === 'function') {
+                            window.loadRequests();
+                        }
+                        if (window.updateDashboardStats && typeof window.updateDashboardStats === 'function') {
+                            window.updateDashboardStats();
+                        }
                     }
+
                     return true;
                 } catch (error) {
                     console.error('خطأ في تحديث حالة الطلب:', error);
@@ -541,12 +831,25 @@
                     if (message) {
                         message.read = true;
                         message.readAt = new Date();
+                        
+                        // تحديث فوري للواجهة
+                        if (window.updateDashboardStats && typeof window.updateDashboardStats === 'function') {
+                            window.updateDashboardStats();
+                        }
+                        if (window.loadMessages && typeof window.loadMessages === 'function') {
+                            window.loadMessages();
+                        }
                     }
                     return true;
                 } catch (error) {
                     console.error('خطأ في تحديث حالة الرسالة:', error);
                     return false;
                 }
+            }
+
+            // إشعار الإدارة
+            notifyAdministration(eventType, data) {
+                console.log(`🔔 إشعار للإدارة: ${eventType}`, data);
             }
 
             // تحميل من التخزين المحلي كنسخة احتياطية
@@ -556,6 +859,9 @@
                     const messages = localStorage.getItem('backup_messages');
                     const requests = localStorage.getItem('backup_requests');
                     const announcements = localStorage.getItem('backup_announcements');
+                    const archivedMessages = localStorage.getItem('backup_archived_messages');
+                    const archivedRequests = localStorage.getItem('backup_archived_requests');
+                    const archivedAnnouncements = localStorage.getItem('backup_archived_announcements');
 
                     this.users = users ? JSON.parse(users) : { admin: {
                         username: 'admin',
@@ -569,6 +875,9 @@
                     this.messages = messages ? JSON.parse(messages) : [];
                     this.requests = requests ? JSON.parse(requests) : [];
                     this.announcements = announcements ? JSON.parse(announcements) : [];
+                    this.archivedMessages = archivedMessages ? JSON.parse(archivedMessages) : [];
+                    this.archivedRequests = archivedRequests ? JSON.parse(archivedRequests) : [];
+                    this.archivedAnnouncements = archivedAnnouncements ? JSON.parse(archivedAnnouncements) : [];
 
                     console.log('📦 تم تحميل البيانات من التخزين المحلي');
                 } catch (error) {
@@ -583,6 +892,17 @@
                     localStorage.setItem('backup_messages', JSON.stringify(this.messages));
                     localStorage.setItem('backup_requests', JSON.stringify(this.requests));
                     localStorage.setItem('backup_announcements', JSON.stringify(this.announcements));
+                    localStorage.setItem('backup_archived_messages', JSON.stringify(this.archivedMessages));
+                    localStorage.setItem('backup_archived_requests', JSON.stringify(this.archivedRequests));
+                    localStorage.setItem('backup_archived_announcements', JSON.stringify(this.archivedAnnouncements));
+                    
+                    // حفظ حالة تسجيل الدخول
+                    if (window.currentUser) {
+                        localStorage.setItem('logged_in_user', JSON.stringify({
+                            username: window.currentUser.username,
+                            loginTime: Date.now()
+                        }));
+                    }
                 } catch (error) {
                     console.warn('لا يمكن حفظ النسخة الاحتياطية:', error);
                 }
@@ -597,6 +917,37 @@
                     this.loadFromLocalStorage();
                 }
             }
+
+            // فحص واستعادة جلسة تسجيل الدخول
+            checkSavedLogin() {
+                try {
+                    const savedUser = localStorage.getItem('logged_in_user');
+                    if (savedUser) {
+                        const userData = JSON.parse(savedUser);
+                        const loginAge = Date.now() - userData.loginTime;
+                        
+                        // إبقاء الجلسة نشطة لمدة 24 ساعة
+                        if (loginAge < 24 * 60 * 60 * 1000) {
+                            return userData.username;
+                        } else {
+                            localStorage.removeItem('logged_in_user');
+                        }
+                    }
+                } catch (error) {
+                    console.error('خطأ في فحص الجلسة المحفوظة:', error);
+                    localStorage.removeItem('logged_in_user');
+                }
+                return null;
+            }
+
+            // مسح جلسة تسجيل الدخول
+            clearSavedLogin() {
+                try {
+                    localStorage.removeItem('logged_in_user');
+                } catch (error) {
+                    console.warn('لا يمكن مسح الجلسة المحفوظة:', error);
+                }
+            }
         }
 
         // إنشاء مدير البيانات
@@ -605,7 +956,15 @@
         // متغيرات النظام
         let currentUser = null;
         let currentSection = 'dashboard';
+        let currentArchiveView = null;
         let pendingConfirmation = null;
+
+        // حفظ البيانات كل دقيقة
+        setInterval(() => {
+            if (dataManager) {
+                dataManager.saveToLocalStorage();
+            }
+        }, 60000);
     </script>
 
     <!-- Loading Screen -->
@@ -637,20 +996,18 @@
             <form id="loginForm" class="space-y-5">
                 <div>
                     <label class="block text-white font-semibold mb-2">اسم المستخدم</label>
-                    <input type="text" id="username" value="admin" class="w-full px-4 py-4 rounded-xl bg-white/20 text-white placeholder-white/60 border border-white/30 focus:border-white focus:bg-white/30 focus:outline-none text-base transition-all" placeholder="أدخل اسم المستخدم">
+                    <input type="text" id="username" class="w-full px-4 py-4 rounded-xl bg-white/20 text-white placeholder-white/60 border border-white/30 focus:border-white focus:bg-white/30 focus:outline-none text-base transition-all" placeholder="أدخل اسم المستخدم">
                 </div>
                 
                 <div>
                     <label class="block text-white font-semibold mb-2">كلمة المرور</label>
                     <div class="relative">
-                        <input type="password" id="password" value="admin123" class="w-full px-4 py-4 rounded-xl bg-white/20 text-white placeholder-white/60 border border-white/30 focus:border-white focus:bg-white/30 focus:outline-none text-base transition-all" placeholder="أدخل كلمة المرور">
+                        <input type="password" id="password" class="w-full px-4 py-4 rounded-xl bg-white/20 text-white placeholder-white/60 border border-white/30 focus:border-white focus:bg-white/30 focus:outline-none text-base transition-all" placeholder="أدخل كلمة المرور">
                         <button type="button" onclick="togglePassword()" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white">
                             <i id="passwordIcon" class="fas fa-eye"></i>
                         </button>
                     </div>
                 </div>
-                
-            
                 
                 <button type="submit" class="w-full bg-white text-primary py-4 rounded-xl font-bold hover:bg-white/90 hover:shadow-xl transition-all transform hover:scale-105">
                     تسجيل الدخول
@@ -794,10 +1151,16 @@
                             <h2 class="text-3xl font-black text-gray-800 dark:text-white mb-2">المراسلات الداخلية</h2>
                             <p class="text-gray-600 dark:text-gray-400">إدارة ومتابعة جميع الرسائل والمراسلات</p>
                         </div>
-                        <button onclick="openComposeModal()" class="bg-gradient-to-r from-primary to-secondary text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all flex items-center gap-2 transform hover:scale-105">
-                            <i class="fas fa-plus"></i>
-                            <span>رسالة جديدة</span>
-                        </button>
+                        <div class="flex items-center gap-3">
+                            <button onclick="showArchive('messages')" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-xl transition-all flex items-center gap-2">
+                                <i class="fas fa-archive"></i>
+                                <span>الأرشيف</span>
+                            </button>
+                            <button onclick="openComposeModal()" class="bg-gradient-to-r from-primary to-secondary text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all flex items-center gap-2 transform hover:scale-105">
+                                <i class="fas fa-plus"></i>
+                                <span>رسالة جديدة</span>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="glass-card rounded-2xl shadow-xl overflow-hidden">
@@ -848,10 +1211,16 @@
                             <h2 class="text-3xl font-black text-gray-800 dark:text-white mb-2">الطلبات الرسمية</h2>
                             <p class="text-gray-600 dark:text-gray-400">إدارة ومتابعة جميع الطلبات الرسمية</p>
                         </div>
-                        <button onclick="openNewRequestModal()" class="bg-gradient-to-r from-primary to-secondary text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all flex items-center gap-2 transform hover:scale-105">
-                            <i class="fas fa-plus"></i>
-                            <span>طلب جديد</span>
-                        </button>
+                        <div class="flex items-center gap-3">
+                            <button onclick="showArchive('requests')" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-xl transition-all flex items-center gap-2">
+                                <i class="fas fa-archive"></i>
+                                <span>الأرشيف</span>
+                            </button>
+                            <button onclick="openNewRequestModal()" class="bg-gradient-to-r from-primary to-secondary text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all flex items-center gap-2 transform hover:scale-105">
+                                <i class="fas fa-plus"></i>
+                                <span>طلب جديد</span>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Stats Cards -->
@@ -870,12 +1239,24 @@
 
                         <div class="glass-card p-6 rounded-xl shadow-lg card-hover">
                             <div class="flex items-center gap-3">
-                                <div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-                                    <i class="fas fa-check text-green-600 text-lg"></i>
+                                <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-check-circle text-purple-600 text-lg"></i>
                                 </div>
                                 <div>
-                                    <p class="font-bold text-gray-800 dark:text-white">معتمدة</p>
-                                    <p class="text-2xl font-black text-green-600" id="approvedCount">0</p>
+                                    <p class="font-bold text-gray-800 dark:text-white">معتمدة من الإدارة</p>
+                                    <p class="text-2xl font-black text-purple-600" id="adminApprovedCount">0</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="glass-card p-6 rounded-xl shadow-lg card-hover">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-reply text-green-600 text-lg"></i>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-gray-800 dark:text-white">مُجاب عليها</p>
+                                    <p class="text-2xl font-black text-green-600" id="repliedCount">0</p>
                                 </div>
                             </div>
                         </div>
@@ -891,18 +1272,6 @@
                                 </div>
                             </div>
                         </div>
-
-                        <div class="glass-card p-6 rounded-xl shadow-lg card-hover">
-                            <div class="flex items-center gap-3">
-                                <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                                    <i class="fas fa-file-alt text-blue-600 text-lg"></i>
-                                </div>
-                                <div>
-                                    <p class="font-bold text-gray-800 dark:text-white">إجمالي الطلبات</p>
-                                    <p class="text-2xl font-black text-blue-600" id="totalRequests">0</p>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
                     <!-- Requests List -->
@@ -910,12 +1279,13 @@
                         <div class="p-6 border-b border-gray-200 dark:border-gray-700">
                             <div class="flex flex-col lg:flex-row gap-4">
                                 <div class="flex-1">
-                                    <input type="text" id="requestSearch" placeholder="البحث في الطلبات..." class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 text-base">
+                                    <input type="text" id="requestSearch" placeholder="البحث في الطلبات..." class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 text-base" onkeyup="filterRequests()">
                                 </div>
-                                <select id="statusFilter" class="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700">
+                                <select id="statusFilter" class="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700" onchange="filterRequests()">
                                     <option value="">جميع الحالات</option>
                                     <option value="pending">قيد المراجعة</option>
-                                    <option value="approved">معتمدة</option>
+                                    <option value="admin-approved">معتمدة من الإدارة</option>
+                                    <option value="replied">مُجاب عليها</option>
                                     <option value="rejected">مرفوضة</option>
                                 </select>
                             </div>
@@ -936,16 +1306,46 @@
                             <h2 class="text-3xl font-black text-gray-800 dark:text-white mb-2">التعميمات والإعلانات</h2>
                             <p class="text-gray-600 dark:text-gray-400">إدارة وإصدار التعميمات والإعلانات</p>
                         </div>
-                        <button onclick="openNewAnnouncementModal()" class="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all flex items-center gap-2 transform hover:scale-105" id="newAnnouncementBtn">
-                            <i class="fas fa-plus"></i>
-                            <span>تعميم جديد</span>
-                        </button>
+                        <div class="flex items-center gap-3">
+                            <button onclick="showArchive('announcements')" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-xl transition-all flex items-center gap-2">
+                                <i class="fas fa-archive"></i>
+                                <span>الأرشيف</span>
+                            </button>
+                            <button onclick="openNewAnnouncementModal()" class="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all flex items-center gap-2 transform hover:scale-105" id="newAnnouncementBtn">
+                                <i class="fas fa-plus"></i>
+                                <span>تعميم جديد</span>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="glass-card rounded-2xl shadow-xl overflow-hidden">
                         <div class="p-6">
                             <div class="space-y-4" id="announcementsList">
                                 <!-- Announcements will be dynamically loaded -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Archive Section -->
+                <div id="archive-section" class="section hidden fade-in">
+                    <div class="mb-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h2 class="text-3xl font-black text-gray-800 dark:text-white mb-2">الأرشيف</h2>
+                                <p class="text-gray-600 dark:text-gray-400">البيانات المؤرشفة والمحفوظة</p>
+                            </div>
+                            <button onclick="goBackFromArchive()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-xl transition-all flex items-center gap-2">
+                                <i class="fas fa-arrow-right"></i>
+                                <span>العودة</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="glass-card rounded-2xl shadow-xl overflow-hidden">
+                        <div class="p-6">
+                            <div class="space-y-4" id="archiveList">
+                                <!-- Archive items will be dynamically loaded -->
                             </div>
                         </div>
                     </div>
@@ -1091,18 +1491,28 @@
                     </div>
                     
                     <div>
-                        <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">نوع الطلب:</label>
-                        <input type="text" id="requestType" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 text-base" placeholder="نوع الطلب">
+                        <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">الإدارة <span class="text-red-500">*</span>:</label>
+                        <select id="requestAdministration" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 text-base" required>
+                            <option value="">اختر الإدارة (إلزامي)</option>
+                            <option value="administration">الإدارة العليا</option>
+                        </select>
                     </div>
                 </div>
                 
-                <div>
-                    <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">الأولوية:</label>
-                    <select id="requestPriority" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 text-base">
-                        <option value="normal">عادي</option>
-                        <option value="high">عاجل</option>
-                        <option value="urgent">عاجل جداً</option>
-                    </select>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">نوع الطلب:</label>
+                        <input type="text" id="requestType" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 text-base" placeholder="نوع الطلب">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">الأولوية:</label>
+                        <select id="requestPriority" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 text-base">
+                            <option value="normal">عادي</option>
+                            <option value="high">عاجل</option>
+                            <option value="urgent">عاجل جداً</option>
+                        </select>
+                    </div>
                 </div>
                 
                 <div>
@@ -1115,11 +1525,99 @@
                     <textarea rows="6" id="requestDetails" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 resize-none text-base" placeholder="اكتب تفاصيل الطلب بشكل واضح ومفصل..."></textarea>
                 </div>
                 
+                <div class="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4">
+                    <div class="flex items-center gap-2 text-yellow-700 dark:text-yellow-300">
+                        <i class="fas fa-info-circle"></i>
+                        <span class="font-semibold">ملاحظة هامة:</span>
+                    </div>
+                    <p class="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
+                        سيتم إرسال الطلب أولاً للإدارة للموافقة، ثم سيتم توجيهه للجهة المختصة للرد عليه مباشرة.
+                    </p>
+                </div>
+                
                 <div class="flex gap-4 pt-4">
                     <button type="submit" class="flex-1 bg-gradient-to-r from-primary to-secondary text-white py-4 rounded-xl hover:shadow-lg transition-all font-bold transform hover:scale-105">
-                        إرسال الطلب
+                        إرسال الطلب للإدارة
                     </button>
                     <button type="button" onclick="closeModal('newRequestModal')" class="px-8 py-4 border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all font-medium">
+                        إلغاء
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Request Reply Modal -->
+    <div id="requestReplyModal" class="fixed inset-0 modal-backdrop flex items-center justify-center z-50 hidden">
+        <div class="glass-card p-8 rounded-3xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-8">
+                <h3 class="text-2xl font-bold text-gray-800 dark:text-white">الرد على الطلب</h3>
+                <button onclick="closeModal('requestReplyModal')" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            
+            <div id="requestDetailsForReply" class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
+                <!-- Request details will be shown here -->
+            </div>
+            
+            <form id="requestReplyForm" class="space-y-6">
+                <input type="hidden" id="replyRequestId">
+                
+                <div>
+                    <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">الرد:</label>
+                    <textarea rows="6" id="requestReplyContent" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 resize-none text-base" placeholder="اكتب ردك على الطلب..."></textarea>
+                </div>
+                
+                <div class="flex gap-4 pt-4">
+                    <button type="submit" class="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white py-4 rounded-xl hover:shadow-lg transition-all font-bold transform hover:scale-105">
+                        إرسال الرد
+                    </button>
+                    <button type="button" onclick="closeModal('requestReplyModal')" class="px-8 py-4 border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all font-medium">
+                        إلغاء
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Request Modal -->
+    <div id="editRequestModal" class="fixed inset-0 modal-backdrop flex items-center justify-center z-50 hidden">
+        <div class="glass-card p-8 rounded-3xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-8">
+                <h3 class="text-2xl font-bold text-gray-800 dark:text-white">تعديل الطلب</h3>
+                <button onclick="closeModal('editRequestModal')" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            
+            <form id="editRequestForm" class="space-y-6">
+                <input type="hidden" id="editRequestId">
+                
+                <div>
+                    <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">عنوان الطلب:</label>
+                    <input type="text" id="editRequestTitle" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 text-base">
+                </div>
+                
+                <div>
+                    <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">تفاصيل الطلب:</label>
+                    <textarea rows="6" id="editRequestDetails" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 resize-none text-base"></textarea>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">الأولوية:</label>
+                    <select id="editRequestPriority" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-700 text-base">
+                        <option value="normal">عادي</option>
+                        <option value="high">عاجل</option>
+                        <option value="urgent">عاجل جداً</option>
+                    </select>
+                </div>
+                
+                <div class="flex gap-4 pt-4">
+                    <button type="submit" class="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-4 rounded-xl hover:shadow-lg transition-all font-bold transform hover:scale-105">
+                        حفظ التعديلات
+                    </button>
+                    <button type="button" onclick="closeModal('editRequestModal')" class="px-8 py-4 border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all font-medium">
                         إلغاء
                     </button>
                 </div>
@@ -1285,14 +1783,76 @@
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
+            // فحص الجلسة المحفوظة أولاً
+            const savedUsername = dataManager.checkSavedLogin();
+            
             setTimeout(() => {
                 document.getElementById('loadingScreen').classList.add('hidden');
-                document.getElementById('loginScreen').classList.remove('hidden');
-                showNotification('النظام جاهز', 'تم تحميل النظام بنجاح', 'success');
+                
+                if (savedUsername) {
+                    // استعادة الجلسة المحفوظة
+                    autoLogin(savedUsername);
+                } else {
+                    // إظهار شاشة تسجيل الدخول بدون قيم افتراضية
+                    document.getElementById('loginScreen').classList.remove('hidden');
+                    showNotification('النظام جاهز', 'تم تحميل النظام بنجاح', 'success');
+                }
             }, 2000);
 
             initializeEventListeners();
         });
+
+        // تسجيل دخول تلقائي للجلسة المحفوظة
+        function autoLogin(username) {
+            try {
+                const user = dataManager.users[username];
+                
+                if (!user || !user.isActive) {
+                    // إذا كان المستخدم غير موجود أو معطل، اظهار شاشة تسجيل الدخول
+                    dataManager.clearSavedLogin();
+                    document.getElementById('loginScreen').classList.remove('hidden');
+                    return;
+                }
+
+                // تسجيل دخول ناجح
+                currentUser = {
+                    username: username,
+                    name: user.name,
+                    department: user.department,
+                    role: user.role,
+                    loginTime: Date.now()
+                };
+
+                // تحديث حالة المستخدم
+                dataManager.updateUser(username, {
+                    lastLogin: new Date().toISOString(),
+                    isOnline: true
+                });
+
+                // تحديث الواجهة
+                document.getElementById('currentUserName').textContent = currentUser.name;
+                document.getElementById('currentUserRole').textContent = currentUser.role;
+                document.getElementById('sidebarUserName').textContent = currentUser.name;
+                document.getElementById('sidebarUserRole').textContent = currentUser.role;
+                
+                // تحميل التنقل حسب نوع المستخدم
+                loadNavigationForUser();
+
+                // إظهار التطبيق الرئيسي
+                document.getElementById('mainApp').classList.remove('hidden');
+
+                // تهيئة لوحة التحكم
+                initializeDashboard();
+                
+                showNotification('أهلاً وسهلاً', `تم استعادة الجلسة بنجاح ${currentUser.name}`, 'success');
+
+            } catch (error) {
+                console.error('خطأ في تسجيل الدخول التلقائي:', error);
+                dataManager.clearSavedLogin();
+                document.getElementById('loginScreen').classList.remove('hidden');
+                showNotification('خطأ', 'حدث خطأ في استعادة الجلسة', 'error');
+            }
+        }
 
         // Event listeners
         function initializeEventListeners() {
@@ -1312,6 +1872,18 @@
             document.getElementById('requestForm').addEventListener('submit', function(e) {
                 e.preventDefault();
                 submitRequest();
+            });
+
+            // Request reply form
+            document.getElementById('requestReplyForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                submitRequestReply();
+            });
+
+            // Edit request form
+            document.getElementById('editRequestForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                updateRequestData();
             });
 
             // Announcement form
@@ -1347,6 +1919,13 @@
                     const targetTab = this.dataset.tab;
                     switchMessageTab(targetTab);
                 });
+            });
+
+            // منع إعادة تحميل الصفحة من كسر الجلسة
+            window.addEventListener('beforeunload', function() {
+                if (currentUser) {
+                    dataManager.saveToLocalStorage();
+                }
             });
 
             // Close dropdowns when clicking outside
@@ -1554,18 +2133,210 @@
                     isOnline: false,
                     lastLogout: new Date().toISOString()
                 });
+                
+                // مسح الجلسة المحفوظة
+                dataManager.clearSavedLogin();
             }
 
             currentUser = null;
             document.getElementById('loginScreen').classList.remove('hidden');
             document.getElementById('mainApp').classList.add('hidden');
             
-            // Reset form
+            // Reset form - بدون قيم افتراضية
             document.getElementById('loginForm').reset();
-            document.getElementById('username').value = 'admin';
-            document.getElementById('password').value = 'admin123';
             
             showNotification('تم تسجيل الخروج', 'تم تسجيل الخروج بنجاح', 'info');
+        }
+
+        // إظهار الأرشيف
+        function showArchive(type) {
+            currentArchiveView = type;
+            showSection('archive');
+            loadArchiveData(type);
+        }
+
+        // العودة من الأرشيف
+        function goBackFromArchive() {
+            if (currentArchiveView) {
+                showSection(currentArchiveView);
+                currentArchiveView = null;
+            } else {
+                showSection('dashboard');
+            }
+        }
+
+        // تحميل بيانات الأرشيف
+        function loadArchiveData(type) {
+            const archiveList = document.getElementById('archiveList');
+            let archivedItems = [];
+            let title = '';
+
+            switch(type) {
+                case 'messages':
+                    archivedItems = dataManager.archivedMessages;
+                    title = 'أرشيف الرسائل';
+                    break;
+                case 'requests':
+                    archivedItems = dataManager.archivedRequests;
+                    title = 'أرشيف الطلبات';
+                    break;
+                case 'announcements':
+                    archivedItems = dataManager.archivedAnnouncements;
+                    title = 'أرشيف التعميمات';
+                    break;
+            }
+
+            // تحديث العنوان
+            document.querySelector('#archive-section h2').textContent = title;
+
+            if (!archivedItems || archivedItems.length === 0) {
+                archiveList.innerHTML = '<div class="text-center py-8 text-gray-500">لا توجد عناصر مؤرشفة</div>';
+                return;
+            }
+
+            // فلترة البيانات حسب الصلاحيات
+            let filteredItems;
+            if (currentUser.department === 'administration') {
+                filteredItems = archivedItems;
+            } else {
+                filteredItems = archivedItems.filter(item => {
+                    if (type === 'messages') {
+                        return item.recipientDepartment === currentUser.department || 
+                               item.fromUsername === currentUser.username;
+                    } else if (type === 'requests') {
+                        return item.department === currentUser.department || 
+                               item.targetDepartment === currentUser.department ||
+                               item.requesterUsername === currentUser.username;
+                    } else if (type === 'announcements') {
+                        return item.target === 'all' || item.target === currentUser.department;
+                    }
+                    return false;
+                });
+            }
+
+            archiveList.innerHTML = filteredItems.map(item => {
+                const timeAgo = getTimeAgo(new Date(item.archivedAt || item.timestamp).getTime());
+                
+                return `
+                    <div class="archived-item message-item flex items-start gap-4 p-6 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <div class="w-12 h-12 bg-gray-100 dark:bg-gray-900/30 rounded-full flex items-center justify-center">
+                            <i class="fas fa-archive text-gray-600 text-lg"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <h4 class="font-bold text-gray-800 dark:text-white">${item.subject || item.title}</h4>
+                                <span class="status-archived px-3 py-1 text-xs rounded-full font-medium">مؤرشف</span>
+                            </div>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm mb-2">
+                                ${type === 'messages' ? `من: ${item.fromUser} • إلى: ${getDepartmentName(item.recipientDepartment)}` :
+                                  type === 'requests' ? `مقدم من: ${item.requester} (${getDepartmentName(item.department)})` :
+                                  `أصدره: ${item.issuer}`} • 
+                                أُرشف ${timeAgo}
+                            </p>
+                            <p class="text-gray-700 dark:text-gray-300">${(item.content || item.details || '').substring(0, 200)}...</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="restoreItem('${type}', '${item.id}')" class="text-blue-600 hover:text-blue-700 p-2" title="استعادة">
+                                <i class="fas fa-undo"></i>
+                            </button>
+                            <button onclick="deleteArchivedItem('${type}', '${item.id}')" class="text-red-600 hover:text-red-700 p-2" title="حذف نهائي">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // استعادة عنصر من الأرشيف
+        async function restoreItem(type, itemId) {
+            try {
+                let collection = '';
+                let sourceArray = [];
+                let targetArray = [];
+
+                switch(type) {
+                    case 'messages':
+                        collection = 'messages';
+                        sourceArray = dataManager.archivedMessages;
+                        targetArray = dataManager.messages;
+                        break;
+                    case 'requests':
+                        collection = 'requests';
+                        sourceArray = dataManager.archivedRequests;
+                        targetArray = dataManager.requests;
+                        break;
+                    case 'announcements':
+                        collection = 'announcements';
+                        sourceArray = dataManager.archivedAnnouncements;
+                        targetArray = dataManager.announcements;
+                        break;
+                }
+
+                await db.collection(collection).doc(itemId).update({
+                    archived: false,
+                    archivedAt: firebase.firestore.FieldValue.delete()
+                });
+
+                const itemIndex = sourceArray.findIndex(item => item.id === itemId);
+                if (itemIndex !== -1) {
+                    const restoredItem = { ...sourceArray[itemIndex], archived: false };
+                    delete restoredItem.archivedAt;
+                    
+                    sourceArray.splice(itemIndex, 1);
+                    targetArray.unshift(restoredItem);
+                }
+
+                loadArchiveData(currentArchiveView);
+                showNotification('تمت الاستعادة', 'تم استعادة العنصر من الأرشيف بنجاح', 'success');
+
+            } catch (error) {
+                console.error('خطأ في استعادة العنصر:', error);
+                showNotification('خطأ', 'حدث خطأ في استعادة العنصر', 'error');
+            }
+        }
+
+        // حذف عنصر من الأرشيف نهائياً
+        function deleteArchivedItem(type, itemId) {
+            showConfirmationModal(
+                'حذف نهائي',
+                'هل أنت متأكد من الحذف النهائي؟ لا يمكن التراجع عن هذا الإجراء!',
+                async () => {
+                    try {
+                        let collection = '';
+                        let sourceArray = [];
+
+                        switch(type) {
+                            case 'messages':
+                                collection = 'messages';
+                                sourceArray = dataManager.archivedMessages;
+                                break;
+                            case 'requests':
+                                collection = 'requests';
+                                sourceArray = dataManager.archivedRequests;
+                                break;
+                            case 'announcements':
+                                collection = 'announcements';
+                                sourceArray = dataManager.archivedAnnouncements;
+                                break;
+                        }
+
+                        await db.collection(collection).doc(itemId).delete();
+
+                        const itemIndex = sourceArray.findIndex(item => item.id === itemId);
+                        if (itemIndex !== -1) {
+                            sourceArray.splice(itemIndex, 1);
+                        }
+
+                        loadArchiveData(currentArchiveView);
+                        showNotification('تم الحذف', 'تم الحذف النهائي للعنصر', 'success');
+
+                    } catch (error) {
+                        console.error('خطأ في الحذف النهائي:', error);
+                        showNotification('خطأ', 'حدث خطأ في الحذف النهائي', 'error');
+                    }
+                }
+            );
         }
 
         // Initialize dashboard
@@ -1619,12 +2390,13 @@
         // Submit request function
         function submitRequest() {
             const targetDepartment = document.getElementById('requestTargetDepartment').value;
+            const administration = document.getElementById('requestAdministration').value;
             const type = document.getElementById('requestType').value;
             const title = document.getElementById('requestTitle').value;
             const details = document.getElementById('requestDetails').value;
             const priority = document.getElementById('requestPriority').value;
 
-            if (!targetDepartment || !type || !title || !details) {
+            if (!targetDepartment || !administration || !type || !title || !details) {
                 showNotification('خطأ', 'يرجى ملء جميع الحقول المطلوبة', 'error');
                 return;
             }
@@ -1638,14 +2410,15 @@
                     requester: currentUser.name,
                     requesterUsername: currentUser.username,
                     department: currentUser.department,
-                    targetDepartment: targetDepartment
+                    targetDepartment: targetDepartment,
+                    administration: administration
                 };
 
                 dataManager.addRequest(requestData);
 
                 closeModal('newRequestModal');
                 document.getElementById('requestForm').reset();
-                showNotification('تم الإرسال', 'تم إرسال الطلب بنجاح وسيتم مراجعته قريباً', 'success');
+                showNotification('تم الإرسال', 'تم إرسال الطلب للإدارة وسيتم مراجعته قريباً', 'success');
                 
                 updateDashboardStats();
                 loadRequests();
@@ -1653,6 +2426,82 @@
             } catch (error) {
                 console.error('خطأ في إرسال الطلب:', error);
                 showNotification('خطأ', 'حدث خطأ في إرسال الطلب', 'error');
+            }
+        }
+
+        // Submit request reply function
+        function submitRequestReply() {
+            const requestId = document.getElementById('replyRequestId').value;
+            const replyContent = document.getElementById('requestReplyContent').value;
+
+            if (!replyContent.trim()) {
+                showNotification('خطأ', 'يرجى كتابة الرد', 'error');
+                return;
+            }
+
+            try {
+                const replyData = {
+                    content: replyContent,
+                    fromUser: currentUser.name,
+                    fromUsername: currentUser.username,
+                    fromDepartment: currentUser.department
+                };
+
+                const success = dataManager.addRequestReply(requestId, replyData);
+                
+                if (success) {
+                    closeModal('requestReplyModal');
+                    document.getElementById('requestReplyForm').reset();
+                    showNotification('تم الإرسال', 'تم إرسال الرد بنجاح', 'success');
+                    
+                    updateDashboardStats();
+                    loadRequests();
+                } else {
+                    showNotification('خطأ', 'حدث خطأ في إرسال الرد', 'error');
+                }
+
+            } catch (error) {
+                console.error('خطأ في إرسال الرد:', error);
+                showNotification('خطأ', 'حدث خطأ في إرسال الرد', 'error');
+            }
+        }
+
+        // Update request data function
+        function updateRequestData() {
+            const requestId = document.getElementById('editRequestId').value;
+            const title = document.getElementById('editRequestTitle').value;
+            const details = document.getElementById('editRequestDetails').value;
+            const priority = document.getElementById('editRequestPriority').value;
+
+            if (!title.trim() || !details.trim()) {
+                showNotification('خطأ', 'يرجى ملء جميع الحقول المطلوبة', 'error');
+                return;
+            }
+
+            try {
+                const updates = {
+                    title: title,
+                    details: details,
+                    priority: priority,
+                    updatedBy: currentUser.name,
+                    updatedAt: new Date()
+                };
+
+                const success = dataManager.updateRequest(requestId, updates);
+                
+                if (success) {
+                    closeModal('editRequestModal');
+                    showNotification('تم التحديث', 'تم تحديث الطلب بنجاح', 'success');
+                    
+                    updateDashboardStats();
+                    loadRequests();
+                } else {
+                    showNotification('خطأ', 'حدث خطأ في تحديث الطلب', 'error');
+                }
+
+            } catch (error) {
+                console.error('خطأ في تحديث الطلب:', error);
+                showNotification('خطأ', 'حدث خطأ في تحديث الطلب', 'error');
             }
         }
 
@@ -1802,10 +2651,11 @@
                 `هل أنت متأكد من حذف المستخدم "${dataManager.users[username]?.name || username}"؟`,
                 () => {
                     try {
-                        dataManager.deleteUser(username);
-                        loadUsersList();
-                        loadDepartmentOptions();
-                        showNotification('تم الحذف', 'تم حذف المستخدم بنجاح', 'success');
+                        const success = dataManager.deleteUser(username);
+                        if (success) {
+                            loadDepartmentOptions();
+                            showNotification('تم الحذف', 'تم حذف المستخدم بنجاح', 'success');
+                        }
                     } catch (error) {
                         console.error('خطأ في حذف المستخدم:', error);
                         showNotification('خطأ', 'حدث خطأ في حذف المستخدم', 'error');
@@ -1814,15 +2664,57 @@
             );
         }
 
-        // Approval functions
-        function approveRequest(event, requestId) {
+        // أرشفة رسالة
+        function archiveMessage(event, messageId) {
             event.stopPropagation();
             
             try {
-                dataManager.updateRequestStatus(requestId, 'approved', currentUser.name);
-                showNotification('تمت الموافقة', 'تم اعتماد الطلب بنجاح', 'success');
+                dataManager.archiveMessage(messageId);
+                showNotification('تمت الأرشفة', 'تم أرشفة الرسالة بنجاح', 'success');
+                loadMessages();
                 updateDashboardStats();
+            } catch (error) {
+                console.error('خطأ في أرشفة الرسالة:', error);
+                showNotification('خطأ', 'حدث خطأ في أرشفة الرسالة', 'error');
+            }
+        }
+
+        // أرشفة طلب
+        function archiveRequest(event, requestId) {
+            event.stopPropagation();
+            
+            try {
+                dataManager.archiveRequest(requestId);
+                showNotification('تمت الأرشفة', 'تم أرشفة الطلب بنجاح', 'success');
                 loadRequests();
+                updateDashboardStats();
+            } catch (error) {
+                console.error('خطأ في أرشفة الطلب:', error);
+                showNotification('خطأ', 'حدث خطأ في أرشفة الطلب', 'error');
+            }
+        }
+
+        // أرشفة تعميم
+        function archiveAnnouncement(event, announcementId) {
+            event.stopPropagation();
+            
+            try {
+                dataManager.archiveAnnouncement(announcementId);
+                showNotification('تمت الأرشفة', 'تم أرشفة التعميم بنجاح', 'success');
+                loadAnnouncements();
+            } catch (error) {
+                console.error('خطأ في أرشفة التعميم:', error);
+                showNotification('خطأ', 'حدث خطأ في أرشفة التعميم', 'error');
+            }
+        }
+
+        // Request management functions
+        function approveRequestByAdmin(event, requestId) {
+            event.stopPropagation();
+            
+            try {
+                dataManager.updateRequestStatus(requestId, 'admin-approved', currentUser.name);
+                showNotification('تمت الموافقة', 'تم اعتماد الطلب من الإدارة، سيتم توجيهه للقسم المختص', 'success');
             } catch (error) {
                 console.error('خطأ في اعتماد الطلب:', error);
                 showNotification('خطأ', 'حدث خطأ في اعتماد الطلب', 'error');
@@ -1835,12 +2727,100 @@
             try {
                 dataManager.updateRequestStatus(requestId, 'rejected', currentUser.name);
                 showNotification('تم الرفض', 'تم رفض الطلب', 'warning');
-                updateDashboardStats();
-                loadRequests();
             } catch (error) {
                 console.error('خطأ في رفض الطلب:', error);
                 showNotification('خطأ', 'حدث خطأ في رفض الطلب', 'error');
             }
+        }
+
+        function replyToRequest(event, requestId) {
+            event.stopPropagation();
+            
+            const request = dataManager.requests.find(r => r.id === requestId);
+            if (!request) return;
+
+            // Show request details
+            document.getElementById('requestDetailsForReply').innerHTML = `
+                <h4 class="font-bold text-gray-800 dark:text-white mb-2">${request.title}</h4>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">من: ${request.requester} (${getDepartmentName(request.department)})</p>
+                <p class="text-gray-700 dark:text-gray-300">${request.details}</p>
+            `;
+            
+            document.getElementById('replyRequestId').value = requestId;
+            document.getElementById('requestReplyModal').classList.remove('hidden');
+        }
+
+        function editRequest(event, requestId) {
+            event.stopPropagation();
+            
+            const request = dataManager.requests.find(r => r.id === requestId);
+            if (!request) return;
+
+            // Check if user can edit this request
+            if (request.requesterUsername !== currentUser.username && currentUser.department !== 'administration') {
+                showNotification('خطأ', 'ليس لديك صلاحية لتعديل هذا الطلب', 'error');
+                return;
+            }
+
+            // Populate edit form
+            document.getElementById('editRequestId').value = requestId;
+            document.getElementById('editRequestTitle').value = request.title;
+            document.getElementById('editRequestDetails').value = request.details;
+            document.getElementById('editRequestPriority').value = request.priority || 'normal';
+            
+            document.getElementById('editRequestModal').classList.remove('hidden');
+        }
+
+        function deleteRequest(event, requestId) {
+            event.stopPropagation();
+            
+            const request = dataManager.requests.find(r => r.id === requestId);
+            if (!request) return;
+
+            // Check if user can delete this request
+            if (request.requesterUsername !== currentUser.username && currentUser.department !== 'administration') {
+                showNotification('خطأ', 'ليس لديك صلاحية لحذف هذا الطلب', 'error');
+                return;
+            }
+
+            showConfirmationModal(
+                'حذف الطلب',
+                `هل أنت متأكد من حذف الطلب "${request.title}"؟`,
+                () => {
+                    try {
+                        const success = dataManager.deleteRequest(requestId);
+                        if (success) {
+                            showNotification('تم الحذف', 'تم حذف الطلب بنجاح', 'success');
+                        }
+                    } catch (error) {
+                        console.error('خطأ في حذف الطلب:', error);
+                        showNotification('خطأ', 'حدث خطأ في حذف الطلب', 'error');
+                    }
+                }
+            );
+        }
+
+        // Filter requests function
+        function filterRequests() {
+            const searchTerm = document.getElementById('requestSearch').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            
+            const requestsContainer = document.getElementById('requestsList');
+            const requests = requestsContainer.children;
+            
+            Array.from(requests).forEach(requestElement => {
+                const textContent = requestElement.textContent.toLowerCase();
+                const requestData = requestElement.dataset;
+                
+                const matchesSearch = searchTerm === '' || textContent.includes(searchTerm);
+                const matchesStatus = statusFilter === '' || requestData.status === statusFilter;
+                
+                if (matchesSearch && matchesStatus) {
+                    requestElement.style.display = '';
+                } else {
+                    requestElement.style.display = 'none';
+                }
+            });
         }
 
         // Load functions for different sections
@@ -1885,6 +2865,9 @@
                                 <button onclick="replyToMessage(event, '${message.id}')" class="text-gray-400 hover:text-primary cursor-pointer p-2" title="رد">
                                     <i class="fas fa-reply"></i>
                                 </button>
+                                <button onclick="archiveMessage(event, '${message.id}')" class="text-gray-400 hover:text-yellow-600 cursor-pointer p-2" title="أرشفة">
+                                    <i class="fas fa-archive"></i>
+                                </button>
                             </div>
                         </div>
                     `;
@@ -1912,6 +2895,11 @@
                                 <p class="text-gray-600 dark:text-gray-400 text-sm">إلى: ${getDepartmentName(message.recipientDepartment)} • ${timeAgo}</p>
                                 <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">${(message.content || '').substring(0, 150)}...</p>
                             </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="archiveMessage(event, '${message.id}')" class="text-gray-400 hover:text-yellow-600 cursor-pointer p-2" title="أرشفة">
+                                    <i class="fas fa-archive"></i>
+                                </button>
+                            </div>
                         </div>
                     `;
                 }).join('');
@@ -1928,7 +2916,7 @@
             } else {
                 userRequests = dataManager.requests.filter(request => 
                     request.department === currentUser.department || 
-                    request.targetDepartment === currentUser.department
+                    (request.targetDepartment === currentUser.department && request.adminApproved)
                 );
             }
 
@@ -1944,40 +2932,104 @@
                 const priorityText = getPriorityText(request.priority || 'normal');
                 const priorityColor = getPriorityColor(request.priority || 'normal');
                 
-                const canApprove = (currentUser.department === 'administration' || 
-                                 currentUser.department === request.targetDepartment) && 
-                                request.status === 'pending';
+                const isAdmin = currentUser.department === 'administration';
+                const isTargetDepartment = currentUser.department === request.targetDepartment;
+                const isRequester = request.requesterUsername === currentUser.username;
+                
+                const canApproveAsAdmin = isAdmin && request.status === 'pending';
+                const canReply = isTargetDepartment && request.status === 'admin-approved';
+                const canEdit = (isRequester || isAdmin) && request.status === 'pending';
+                const canDelete = isRequester || isAdmin;
+
+                let actionsHtml = '';
+                if (canApproveAsAdmin) {
+                    actionsHtml = `
+                        <div class="request-actions">
+                            <div class="flex gap-3">
+                                <button onclick="approveRequestByAdmin(event, '${request.id}')" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2 text-sm">
+                                    <i class="fas fa-check"></i>
+                                    اعتماد للقسم
+                                </button>
+                                <button onclick="rejectRequest(event, '${request.id}')" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2 text-sm">
+                                    <i class="fas fa-times"></i>
+                                    رفض
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                } else if (canReply) {
+                    actionsHtml = `
+                        <div class="request-actions">
+                            <button onclick="replyToRequest(event, '${request.id}')" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2 text-sm">
+                                <i class="fas fa-reply"></i>
+                                رد على الطلب
+                            </button>
+                        </div>
+                    `;
+                }
+
+                const managementActionsHtml = (canEdit || canDelete) ? `
+                    <div class="flex items-center gap-2 text-sm">
+                        ${canEdit ? `<button onclick="editRequest(event, '${request.id}')" class="text-blue-600 hover:text-blue-700 p-1" title="تعديل">
+                            <i class="fas fa-edit"></i>
+                        </button>` : ''}
+                        <button onclick="archiveRequest(event, '${request.id}')" class="text-yellow-600 hover:text-yellow-700 p-1" title="أرشفة">
+                            <i class="fas fa-archive"></i>
+                        </button>
+                        ${canDelete ? `<button onclick="deleteRequest(event, '${request.id}')" class="text-red-600 hover:text-red-700 p-1" title="حذف">
+                            <i class="fas fa-trash"></i>
+                        </button>` : ''}
+                    </div>
+                ` : `
+                    <div class="flex items-center gap-2 text-sm">
+                        <button onclick="archiveRequest(event, '${request.id}')" class="text-yellow-600 hover:text-yellow-700 p-1" title="أرشفة">
+                            <i class="fas fa-archive"></i>
+                        </button>
+                    </div>
+                `;
+
+                const repliesHtml = request.replies && request.replies.length > 0 ? `
+                    <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                        <h5 class="font-semibold text-gray-800 dark:text-white mb-3">الردود:</h5>
+                        ${request.replies.map(reply => `
+                            <div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg mb-2 border-r-4 border-blue-500">
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                                    ${reply.fromUser} (${getDepartmentName(reply.fromDepartment)}) • ${getTimeAgo(new Date(reply.timestamp).getTime())}
+                                </p>
+                                <p class="text-gray-800 dark:text-white">${reply.content}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : '';
                 
                 return `
-                    <div class="message-item flex items-start gap-4 p-6 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                            <i class="fas fa-file-alt text-blue-600 text-lg"></i>
-                        </div>
-                        <div class="flex-1">
-                            <div class="flex items-center gap-2 mb-2">
-                                <h4 class="font-bold text-gray-800 dark:text-white">${request.title}</h4>
-                                <span class="bg-${priorityColor}-100 dark:bg-${priorityColor}-900/30 text-${priorityColor}-600 text-xs px-2 py-1 rounded-full">${priorityText}</span>
-                                <span class="${statusClass} px-3 py-1 text-xs rounded-full font-medium">${statusText}</span>
-                            </div>
-                            <p class="text-gray-600 dark:text-gray-400 text-sm mb-2">
-                                مقدم من: ${request.requester} (${getDepartmentName(request.department)}) • ${timeAgo}
-                            </p>
-                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                                نوع الطلب: ${request.type} | إلى: ${getDepartmentName(request.targetDepartment)}
-                            </p>
-                            <p class="text-gray-700 dark:text-gray-300 mb-4">${request.details}</p>
-                            ${canApprove ? `
-                                <div class="flex gap-3">
-                                    <button onclick="approveRequest(event, '${request.id}')" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2">
-                                        <i class="fas fa-check"></i>
-                                        موافقة
-                                    </button>
-                                    <button onclick="rejectRequest(event, '${request.id}')" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2">
-                                        <i class="fas fa-times"></i>
-                                        رفض
-                                    </button>
+                    <div class="message-item border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 p-6" data-status="${request.status}">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-start gap-4 flex-1">
+                                <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-file-alt text-blue-600 text-lg"></i>
                                 </div>
-                            ` : ''}
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <h4 class="font-bold text-gray-800 dark:text-white">${request.title}</h4>
+                                        <span class="bg-${priorityColor}-100 dark:bg-${priorityColor}-900/30 text-${priorityColor}-600 text-xs px-2 py-1 rounded-full">${priorityText}</span>
+                                        <span class="${statusClass} px-3 py-1 text-xs rounded-full font-medium">${statusText}</span>
+                                    </div>
+                                    <p class="text-gray-600 dark:text-gray-400 text-sm mb-2">
+                                        مقدم من: ${request.requester} (${getDepartmentName(request.department)}) • ${timeAgo}
+                                    </p>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                                        نوع الطلب: ${request.type} | إلى: ${getDepartmentName(request.targetDepartment)}
+                                    </p>
+                                    ${request.adminApproved ? `<p class="text-sm text-purple-600 dark:text-purple-400 mb-2">
+                                        ✓ معتمد من الإدارة بواسطة: ${request.adminApprovedBy}
+                                    </p>` : ''}
+                                    <p class="text-gray-700 dark:text-gray-300 mb-4">${request.details}</p>
+                                    ${repliesHtml}
+                                    ${actionsHtml}
+                                </div>
+                            </div>
+                            ${managementActionsHtml}
                         </div>
                     </div>
                 `;
@@ -2022,6 +3074,13 @@
                             </p>
                             <p class="text-gray-700 dark:text-gray-300">${announcement.content}</p>
                         </div>
+                        ${issuedByCurrentUser || currentUser.department === 'administration' ? `
+                            <div class="flex items-center gap-2">
+                                <button onclick="archiveAnnouncement(event, '${announcement.id}')" class="text-gray-400 hover:text-yellow-600 cursor-pointer p-2" title="أرشفة">
+                                    <i class="fas fa-archive"></i>
+                                </button>
+                            </div>
+                        ` : ''}
                     </div>
                 `;
             }).join('');
@@ -2102,17 +3161,32 @@
                 m.recipientDepartment === currentUser.department
             );
             const newMessages = userMessages.filter(m => !m.read);
-            const pendingReqs = dataManager.requests.filter(r => 
-                r.status === 'pending' && (
-                    currentUser.department === 'administration' || 
-                    r.targetDepartment === currentUser.department ||
-                    r.department === currentUser.department
+            
+            let pendingReqs, adminApprovedReqs, repliedReqs;
+            if (currentUser.department === 'administration') {
+                pendingReqs = dataManager.requests.filter(r => r.status === 'pending');
+                adminApprovedReqs = dataManager.requests.filter(r => r.status === 'admin-approved');
+                repliedReqs = dataManager.requests.filter(r => r.status === 'replied');
+            } else {
+                pendingReqs = dataManager.requests.filter(r => 
+                    r.status === 'pending' && (r.department === currentUser.department || r.targetDepartment === currentUser.department)
+                );
+                adminApprovedReqs = dataManager.requests.filter(r => 
+                    r.status === 'admin-approved' && r.targetDepartment === currentUser.department
+                );
+                repliedReqs = dataManager.requests.filter(r => 
+                    r.status === 'replied' && (r.department === currentUser.department || r.targetDepartment === currentUser.department)
+                );
+            }
+
+            const rejectedReqs = dataManager.requests.filter(r => 
+                r.status === 'rejected' && (
+                    currentUser.department === 'administration' ||
+                    r.department === currentUser.department ||
+                    r.targetDepartment === currentUser.department
                 )
             );
-            const approvedToday = dataManager.requests.filter(r => 
-                r.status === 'approved' && 
-                isToday(new Date(r.timestamp))
-            );
+
             const urgentAlerts = [...newMessages, ...pendingReqs].filter(item => 
                 item.priority === 'urgent'
             );
@@ -2149,11 +3223,11 @@
                 <div class="glass-card p-6 rounded-2xl shadow-xl card-hover">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-gray-600 dark:text-gray-400 font-medium">طلبات معتمدة اليوم</p>
-                            <p class="text-3xl font-black text-gray-800 dark:text-white">${approvedToday.length}</p>
-                            <p class="text-sm text-green-600">معدل إنجاز ممتاز</p>
+                            <p class="text-gray-600 dark:text-gray-400 font-medium">معتمدة من الإدارة</p>
+                            <p class="text-3xl font-black text-gray-800 dark:text-white">${adminApprovedReqs.length}</p>
+                            <p class="text-sm text-purple-600">جاهزة للرد</p>
                         </div>
-                        <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg">
+                        <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
                             <i class="fas fa-check-circle text-white text-2xl"></i>
                         </div>
                     </div>
@@ -2176,7 +3250,7 @@
             // Update navigation counters
             const elements = {
                 unreadMessages: newMessages.length,
-                pendingRequests: pendingReqs.length,
+                pendingRequests: pendingReqs.length + adminApprovedReqs.length,
                 notificationCount: urgentAlerts.length
             };
 
@@ -2193,16 +3267,12 @@
             });
 
             // Update request stats
-            const pending = dataManager.requests.filter(r => r.status === 'pending').length;
-            const approved = dataManager.requests.filter(r => r.status === 'approved').length;
-            const rejected = dataManager.requests.filter(r => r.status === 'rejected').length;
-
-            ['pendingCount', 'approvedCount', 'rejectedCount', 'totalRequests'].forEach(id => {
+            ['pendingCount', 'adminApprovedCount', 'repliedCount', 'rejectedCount'].forEach(id => {
                 const element = document.getElementById(id);
                 if (element) {
-                    const value = id === 'pendingCount' ? pending :
-                                 id === 'approvedCount' ? approved :
-                                 id === 'rejectedCount' ? rejected : dataManager.requests.length;
+                    const value = id === 'pendingCount' ? pendingReqs.length :
+                                 id === 'adminApprovedCount' ? adminApprovedReqs.length :
+                                 id === 'repliedCount' ? repliedReqs.length : rejectedReqs.length;
                     element.textContent = value;
                 }
             });
@@ -2406,8 +3476,6 @@
             const message = dataManager.messages.find(m => m.id === messageId);
             if (message && !message.read) {
                 dataManager.markMessageAsRead(messageId);
-                updateDashboardStats();
-                loadMessages();
             }
             
             if (message) {
@@ -2435,6 +3503,9 @@
                     messages: dataManager.messages,
                     requests: dataManager.requests,
                     announcements: dataManager.announcements,
+                    archivedMessages: dataManager.archivedMessages,
+                    archivedRequests: dataManager.archivedRequests,
+                    archivedAnnouncements: dataManager.archivedAnnouncements,
                     exportedAt: new Date().toISOString(),
                     exportedBy: currentUser.username
                 };
@@ -2469,6 +3540,9 @@
                         dataManager.messages = [];
                         dataManager.requests = [];
                         dataManager.announcements = [];
+                        dataManager.archivedMessages = [];
+                        dataManager.archivedRequests = [];
+                        dataManager.archivedAnnouncements = [];
                         
                         // Keep only admin user
                         const adminUser = dataManager.users.admin;
@@ -2592,7 +3666,8 @@
         function getStatusClass(status) {
             const classes = {
                 'pending': 'status-pending',
-                'approved': 'status-approved',
+                'admin-approved': 'status-admin-approved',
+                'replied': 'status-approved',
                 'rejected': 'status-rejected'
             };
             return classes[status] || 'status-pending';
@@ -2601,7 +3676,8 @@
         function getStatusText(status) {
             const texts = {
                 'pending': 'قيد المراجعة',
-                'approved': 'معتمدة',
+                'admin-approved': 'معتمدة من الإدارة',
+                'replied': 'مُجاب عليها',
                 'rejected': 'مرفوضة'
             };
             return texts[status] || status;
