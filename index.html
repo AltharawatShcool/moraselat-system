@@ -548,6 +548,31 @@
                 }
             }
 
+            // حذف رسالة فوري
+            async deleteMessage(messageId) {
+                try {
+                    await db.collection('messages').doc(messageId).delete();
+                    
+                    const messageIndex = this.messages.findIndex(m => m.id === messageId);
+                    if (messageIndex !== -1) {
+                        this.messages.splice(messageIndex, 1);
+
+                        // تحديث فوري للواجهة
+                        if (window.loadMessages && typeof window.loadMessages === 'function') {
+                            window.loadMessages();
+                        }
+                        if (window.updateDashboardStats && typeof window.updateDashboardStats === 'function') {
+                            window.updateDashboardStats();
+                        }
+                    }
+
+                    return true;
+                } catch (error) {
+                    console.error('خطأ في حذف الرسالة:', error);
+                    return false;
+                }
+            }
+
             // أرشفة رسالة
             async archiveMessage(messageId) {
                 try {
@@ -958,6 +983,7 @@
         let currentSection = 'dashboard';
         let currentArchiveView = null;
         let pendingConfirmation = null;
+        let currentMessageId = null;
 
         // حفظ البيانات كل دقيقة
         setInterval(() => {
@@ -1420,6 +1446,26 @@
     </div>
 
     <!-- Modals -->
+    <!-- Message Details Modal -->
+    <div id="messageDetailsModal" class="fixed inset-0 modal-backdrop flex items-center justify-center z-50 hidden">
+        <div class="glass-card p-8 rounded-3xl shadow-2xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto slide-in-right">
+            <div class="flex items-center justify-between mb-8">
+                <h3 class="text-2xl font-bold text-gray-800 dark:text-white">تفاصيل الرسالة</h3>
+                <button onclick="closeModal('messageDetailsModal')" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            
+            <div id="messageDetailsContent" class="space-y-6">
+                <!-- Message details will be loaded here -->
+            </div>
+            
+            <div id="messageActions" class="flex flex-wrap gap-3 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <!-- Action buttons will be loaded here -->
+            </div>
+        </div>
+    </div>
+
     <!-- Compose Message Modal -->
     <div id="composeModal" class="fixed inset-0 modal-backdrop flex items-center justify-center z-50 hidden">
         <div class="glass-card p-8 rounded-3xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto slide-in-right">
@@ -2664,6 +2710,99 @@
             );
         }
 
+        // فتح تفاصيل الرسالة في صندوق الحوار
+        function openMessage(messageId) {
+            const message = dataManager.messages.find(m => m.id === messageId);
+            if (!message) return;
+
+            currentMessageId = messageId;
+
+            // تحديث حالة القراءة
+            if (!message.read && message.recipientDepartment === currentUser.department) {
+                dataManager.markMessageAsRead(messageId);
+            }
+
+            const timeAgo = getTimeAgo(new Date(message.timestamp).getTime());
+            const priorityText = getPriorityText(message.priority || 'normal');
+            const priorityColor = getPriorityColor(message.priority || 'normal');
+            const icon = getMessageIcon(message.fromDepartment);
+
+            // عرض تفاصيل الرسالة
+            document.getElementById('messageDetailsContent').innerHTML = `
+                <div class="bg-gray-50 dark:bg-gray-700 p-6 rounded-xl">
+                    <div class="flex items-start gap-4">
+                        <div class="w-16 h-16 ${icon.bg} rounded-full flex items-center justify-center">
+                            <i class="${icon.class} ${icon.color} text-2xl"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-2">
+                                <h4 class="text-2xl font-bold text-gray-800 dark:text-white">${message.subject}</h4>
+                                <span class="bg-${priorityColor}-100 dark:bg-${priorityColor}-900/30 text-${priorityColor}-600 text-sm px-3 py-1 rounded-full font-medium">${priorityText}</span>
+                            </div>
+                            <div class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                                <p><strong>من:</strong> ${message.fromUser} (${getDepartmentName(message.fromDepartment)})</p>
+                                <p><strong>إلى:</strong> ${getDepartmentName(message.recipientDepartment)}</p>
+                                <p><strong>وقت الإرسال:</strong> ${timeAgo}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-6">
+                    <h5 class="text-lg font-bold text-gray-800 dark:text-white mb-3">محتوى الرسالة:</h5>
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-600">
+                        <p class="text-gray-800 dark:text-white text-base leading-relaxed whitespace-pre-wrap">${message.content}</p>
+                    </div>
+                </div>
+            `;
+
+            // إعداد أزرار الإجراءات
+            const canReply = message.recipientDepartment === currentUser.department;
+            const canDelete = message.fromUsername === currentUser.username || currentUser.department === 'administration';
+            const canArchive = canReply || canDelete;
+
+            let actionsHtml = '';
+            
+            if (canReply) {
+                actionsHtml += `
+                    <button onclick="replyToMessage()" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-xl transition-all flex items-center gap-2">
+                        <i class="fas fa-reply"></i>
+                        <span>رد على الرسالة</span>
+                    </button>
+                `;
+            }
+            
+            if (canArchive) {
+                actionsHtml += `
+                    <button onclick="archiveCurrentMessage()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-xl transition-all flex items-center gap-2">
+                        <i class="fas fa-archive"></i>
+                        <span>أرشفة</span>
+                    </button>
+                `;
+            }
+            
+            if (canDelete) {
+                actionsHtml += `
+                    <button onclick="deleteCurrentMessage()" class="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-xl transition-all flex items-center gap-2">
+                        <i class="fas fa-trash"></i>
+                        <span>حذف</span>
+                    </button>
+                `;
+            }
+
+            actionsHtml += `
+                <button onclick="closeModal('messageDetailsModal')" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-xl transition-all flex items-center gap-2">
+                    <i class="fas fa-times"></i>
+                    <span>إغلاق</span>
+                </button>
+            `;
+
+            document.getElementById('messageActions').innerHTML = actionsHtml;
+
+            // إظهار الصندوق
+            document.getElementById('messageDetailsModal').classList.remove('hidden');
+        }
+
         // أرشفة رسالة
         function archiveMessage(event, messageId) {
             event.stopPropagation();
@@ -2677,6 +2816,55 @@
                 console.error('خطأ في أرشفة الرسالة:', error);
                 showNotification('خطأ', 'حدث خطأ في أرشفة الرسالة', 'error');
             }
+        }
+
+        // أرشفة الرسالة الحالية من النافذة المنبثقة
+        function archiveCurrentMessage() {
+            if (currentMessageId) {
+                dataManager.archiveMessage(currentMessageId);
+                closeModal('messageDetailsModal');
+                loadMessages();
+                updateDashboardStats();
+                showNotification('تمت الأرشفة', 'تم أرشفة الرسالة بنجاح', 'success');
+            }
+        }
+
+        // حذف الرسالة الحالية من النافذة المنبثقة
+        function deleteCurrentMessage() {
+            if (currentMessageId) {
+                showConfirmationModal(
+                    'حذف الرسالة',
+                    'هل أنت متأكد من حذف هذه الرسالة؟',
+                    () => {
+                        dataManager.deleteMessage(currentMessageId);
+                        closeModal('messageDetailsModal');
+                        loadMessages();
+                        updateDashboardStats();
+                        showNotification('تم الحذف', 'تم حذف الرسالة بنجاح', 'success');
+                    }
+                );
+            }
+        }
+
+        // حذف رسالة مع التأكيد
+        function deleteMessage(event, messageId) {
+            event.stopPropagation();
+            
+            showConfirmationModal(
+                'حذف الرسالة',
+                'هل أنت متأكد من حذف هذه الرسالة؟',
+                () => {
+                    try {
+                        dataManager.deleteMessage(messageId);
+                        showNotification('تم الحذف', 'تم حذف الرسالة بنجاح', 'success');
+                        loadMessages();
+                        updateDashboardStats();
+                    } catch (error) {
+                        console.error('خطأ في حذف الرسالة:', error);
+                        showNotification('خطأ', 'حدث خطأ في حذف الرسالة', 'error');
+                    }
+                }
+            );
         }
 
         // أرشفة طلب
@@ -2862,11 +3050,11 @@
                                 <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">${(message.content || '').substring(0, 150)}...</p>
                             </div>
                             <div class="flex items-center gap-2">
-                                <button onclick="replyToMessage(event, '${message.id}')" class="text-gray-400 hover:text-primary cursor-pointer p-2" title="رد">
-                                    <i class="fas fa-reply"></i>
-                                </button>
                                 <button onclick="archiveMessage(event, '${message.id}')" class="text-gray-400 hover:text-yellow-600 cursor-pointer p-2" title="أرشفة">
                                     <i class="fas fa-archive"></i>
+                                </button>
+                                <button onclick="deleteMessage(event, '${message.id}')" class="text-gray-400 hover:text-red-600 cursor-pointer p-2" title="حذف">
+                                    <i class="fas fa-trash"></i>
                                 </button>
                             </div>
                         </div>
@@ -2883,7 +3071,7 @@
                     const priorityText = getPriorityText(message.priority || 'normal');
                     
                     return `
-                        <div class="message-item flex items-center gap-4 p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <div class="message-item flex items-center gap-4 p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer" onclick="openMessage('${message.id}')">
                             <div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
                                 <i class="fas fa-paper-plane text-green-600"></i>
                             </div>
@@ -2898,6 +3086,9 @@
                             <div class="flex items-center gap-2">
                                 <button onclick="archiveMessage(event, '${message.id}')" class="text-gray-400 hover:text-yellow-600 cursor-pointer p-2" title="أرشفة">
                                     <i class="fas fa-archive"></i>
+                                </button>
+                                <button onclick="deleteMessage(event, '${message.id}')" class="text-gray-400 hover:text-red-600 cursor-pointer p-2" title="حذف">
+                                    <i class="fas fa-trash"></i>
                                 </button>
                             </div>
                         </div>
@@ -3333,7 +3524,7 @@
                 const priorityClass = getPriorityClass(activity.priority || 'normal');
                 
                 return `
-                    <div class="message-item flex items-center gap-4 p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${priorityClass}">
+                    <div class="message-item flex items-center gap-4 p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${priorityClass}" onclick="${activity.activityType === 'message' ? `openMessage('${activity.id}')` : ''}">
                         <div class="w-12 h-12 ${icon.bg} rounded-full flex items-center justify-center">
                             <i class="${icon.class} ${icon.color}"></i>
                         </div>
@@ -3349,6 +3540,26 @@
                     </div>
                 `;
             }).join('');
+        }
+
+        // الرد على رسالة من النافذة المنبثقة
+        function replyToMessage(event, messageId) {
+            if (event) event.stopPropagation();
+            
+            let message;
+            if (messageId) {
+                message = dataManager.messages.find(m => m.id === messageId);
+            } else if (currentMessageId) {
+                message = dataManager.messages.find(m => m.id === currentMessageId);
+            }
+            
+            if (message) {
+                closeModal('messageDetailsModal');
+                openComposeModal();
+                document.getElementById('messageRecipient').value = message.fromDepartment;
+                document.getElementById('messageSubject').value = 'رد: ' + message.subject;
+                document.getElementById('messageContent').value = '\n\n--- الرسالة الأصلية ---\n' + message.content;
+            }
         }
 
         // Navigation and modal functions
@@ -3447,12 +3658,17 @@
 
         function closeModal(modalId) {
             document.getElementById(modalId).classList.add('hidden');
+            // إعادة تعيين معرف الرسالة الحالية
+            if (modalId === 'messageDetailsModal') {
+                currentMessageId = null;
+            }
         }
 
         function closeAllModals() {
             document.querySelectorAll('.modal-backdrop').forEach(modal => {
                 modal.classList.add('hidden');
             });
+            currentMessageId = null;
         }
 
         // Confirmation modal
@@ -3469,30 +3685,6 @@
                 pendingConfirmation = null;
             }
             closeModal('confirmationModal');
-        }
-
-        // Message and request interaction functions
-        function openMessage(messageId) {
-            const message = dataManager.messages.find(m => m.id === messageId);
-            if (message && !message.read) {
-                dataManager.markMessageAsRead(messageId);
-            }
-            
-            if (message) {
-                showNotification('تفاصيل الرسالة', `${message.subject} - ${message.content}`, 'info');
-            }
-        }
-
-        function replyToMessage(event, messageId) {
-            event.stopPropagation();
-            
-            const message = dataManager.messages.find(m => m.id === messageId);
-            if (message) {
-                openComposeModal();
-                document.getElementById('messageRecipient').value = message.fromDepartment;
-                document.getElementById('messageSubject').value = 'رد: ' + message.subject;
-                document.getElementById('messageContent').value = '\n\n--- الرسالة الأصلية ---\n' + message.content;
-            }
         }
 
         // Export and utility functions
